@@ -1,5 +1,6 @@
 import { Notification } from 'electron';
 import { getStore } from './store';
+import { runAutoMaintenancePrints } from './auto-print';
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -45,6 +46,9 @@ function checkStatuses(): void {
   } catch {
     // Silently ignore — store may not be ready yet
   }
+
+  // Run auto maintenance prints after checking statuses
+  runAutoMaintenancePrints();
 }
 
 function notify(title: string, body: string, urgency: 'normal' | 'critical' = 'normal'): void {

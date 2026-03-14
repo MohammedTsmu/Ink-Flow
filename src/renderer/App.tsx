@@ -6,6 +6,7 @@ import EditPrinterModal from './components/EditPrinterModal';
 import DetectPrintersModal from './components/DetectPrintersModal';
 import HistoryPanel from './components/HistoryPanel';
 import SettingsPanel from './components/SettingsPanel';
+import StatisticsPanel from './components/StatisticsPanel';
 import { PrinterWithStatus } from './types';
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [historyPrinterId, setHistoryPrinterId] = useState<number | undefined>(undefined);
   const [showSettings, setShowSettings] = useState(false);
+  const [showStats, setShowStats] = useState(false);
 
   const loadPrinters = async () => {
     const data = await window.api.getPrintersWithStatus();
@@ -48,6 +50,7 @@ export default function App() {
         onDetectPrinters={() => setShowDetect(true)}
         onShowHistory={handleShowHistory}
         onShowSettings={() => setShowSettings(true)}
+        onShowStats={() => setShowStats(true)}
         onShowPrinterHistory={handleShowPrinterHistory}
       />
       {showAddModal && (
@@ -78,6 +81,11 @@ export default function App() {
       {showSettings && (
         <SettingsPanel
           onClose={() => setShowSettings(false)}
+        />
+      )}
+      {showStats && (
+        <StatisticsPanel
+          onClose={() => setShowStats(false)}
         />
       )}
     </Layout>

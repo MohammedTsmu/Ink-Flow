@@ -1,5 +1,6 @@
 import React from 'react';
 import { PrinterWithStatus } from '../types';
+import { useTheme } from '../ThemeContext';
 import PrinterCard from './PrinterCard';
 
 interface DashboardProps {
@@ -10,14 +11,19 @@ interface DashboardProps {
   onDetectPrinters: () => void;
   onShowHistory: () => void;
   onShowSettings: () => void;
+  onShowStats: () => void;
   onShowPrinterHistory: (printerId: number) => void;
 }
 
-export default function Dashboard({ printers, onAddPrinter, onEditPrinter, onRefresh, onDetectPrinters, onShowHistory, onShowSettings, onShowPrinterHistory }: DashboardProps) {
+export default function Dashboard({ printers, onAddPrinter, onEditPrinter, onRefresh, onDetectPrinters, onShowHistory, onShowSettings, onShowStats, onShowPrinterHistory }: DashboardProps) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const overdue = printers.filter(p => p.status === 'overdue').length;
   const urgent  = printers.filter(p => p.status === 'urgent').length;
   const warning = printers.filter(p => p.status === 'warning').length;
   const good    = printers.filter(p => p.status === 'good').length;
+
+  const btnClass = `flex items-center gap-2 px-3 py-2 ${isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'} rounded-lg transition-colors text-sm`;
 
   return (
     <div>
@@ -47,28 +53,25 @@ export default function Dashboard({ printers, onAddPrinter, onEditPrinter, onRef
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <button
-            onClick={onDetectPrinters}
-            className="flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors text-sm"
-          >
+          <button onClick={onDetectPrinters} className={btnClass}>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             Detect
           </button>
-          <button
-            onClick={onShowHistory}
-            className="flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors text-sm"
-          >
+          <button onClick={onShowHistory} className={btnClass}>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             History
           </button>
-          <button
-            onClick={onShowSettings}
-            className="flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors text-sm"
-          >
+          <button onClick={onShowStats} className={btnClass}>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            Stats
+          </button>
+          <button onClick={onShowSettings} className={btnClass}>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -90,11 +93,11 @@ export default function Dashboard({ printers, onAddPrinter, onEditPrinter, onRef
       {/* Printer grid */}
       {printers.length === 0 ? (
         <div className="text-center py-20">
-          <svg className="w-16 h-16 mx-auto text-gray-700 mb-4" viewBox="0 0 24 24" fill="currentColor">
+          <svg className={`w-16 h-16 mx-auto ${isDark ? 'text-gray-700' : 'text-gray-300'} mb-4`} viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 2C12 2 5 10 5 15a7 7 0 0014 0C19 10 12 2 12 2z" />
           </svg>
-          <h2 className="text-xl font-semibold text-gray-400 mb-2">No printers yet</h2>
-          <p className="text-gray-500 mb-6">Add your first printer to start tracking its maintenance schedule.</p>
+          <h2 className={`text-xl font-semibold ${isDark ? 'text-gray-400' : 'text-gray-500'} mb-2`}>No printers yet</h2>
+          <p className={`${isDark ? 'text-gray-500' : 'text-gray-400'} mb-6`}>Add your first printer to start tracking its maintenance schedule.</p>
           <button
             onClick={onAddPrinter}
             className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"

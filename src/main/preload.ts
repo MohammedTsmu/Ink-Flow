@@ -16,4 +16,11 @@ contextBridge.exposeInMainWorld('api', {
   getAutoStart: () => ipcRenderer.invoke('get-autostart'),
   setAutoStart: (enabled: boolean) => ipcRenderer.invoke('set-autostart', enabled),
   getAllEvents: () => ipcRenderer.invoke('get-all-events'),
+  // Phase 3
+  getSettings: () => ipcRenderer.invoke('get-settings'),
+  updateSettings: (partial: Record<string, unknown>) => ipcRenderer.invoke('update-settings', partial),
+  getStatistics: () => ipcRenderer.invoke('get-statistics'),
+  sendTestPrint: (printerName: string, printerId: number) => ipcRenderer.invoke('send-test-print', printerName, printerId),
+  exportBackup: () => ipcRenderer.invoke('export-backup'),
+  importBackup: () => ipcRenderer.invoke('import-backup'),
 });

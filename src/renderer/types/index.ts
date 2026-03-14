@@ -37,6 +37,32 @@ export interface MaintenanceEventWithPrinter extends MaintenanceEvent {
   printerName: string;
 }
 
+export interface AppSettings {
+  autoMaintenancePrint: boolean;
+  theme: 'dark' | 'light';
+}
+
+export interface PrinterStats {
+  printerId: number;
+  printerName: string;
+  totalEvents: number;
+  prints: number;
+  cleans: number;
+}
+
+export interface DailyStats {
+  date: string;
+  prints: number;
+  cleans: number;
+}
+
+export interface Statistics {
+  totalPrinters: number;
+  totalEvents: number;
+  perPrinter: PrinterStats[];
+  daily: DailyStats[];
+}
+
 declare global {
   interface Window {
     api: {
@@ -52,6 +78,13 @@ declare global {
       getAutoStart: () => Promise<boolean>;
       setAutoStart: (enabled: boolean) => Promise<void>;
       getAllEvents: () => Promise<MaintenanceEventWithPrinter[]>;
+      // Phase 3
+      getSettings: () => Promise<AppSettings>;
+      updateSettings: (partial: Partial<AppSettings>) => Promise<AppSettings>;
+      getStatistics: () => Promise<Statistics>;
+      sendTestPrint: (printerName: string, printerId: number) => Promise<boolean>;
+      exportBackup: () => Promise<boolean>;
+      importBackup: () => Promise<boolean>;
     };
   }
 }

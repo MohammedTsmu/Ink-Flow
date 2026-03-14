@@ -21,11 +21,17 @@ export interface EventRecord {
   notes: string;
 }
 
+export interface AppSettings {
+  autoMaintenancePrint: boolean;
+  theme: 'dark' | 'light';
+}
+
 interface StoreData {
   printers: PrinterRecord[];
   events: EventRecord[];
   nextPrinterId: number;
   nextEventId: number;
+  settings: AppSettings;
 }
 
 class Store {
@@ -42,7 +48,10 @@ class Store {
       const raw = fs.readFileSync(this.filePath, 'utf-8');
       this.data = JSON.parse(raw);
     } catch {
-      this.data = { printers: [], events: [], nextPrinterId: 1, nextEventId: 1 };
+      this.data = {
+        printers: [], events: [], nextPrinterId: 1, nextEventId: 1,
+        settings: { autoMaintenancePrint: false, theme: 'dark' },
+      };
       this.save();
     }
   }
@@ -159,6 +168,94 @@ class Store {
     else status = 'good';
 
     return { daysRemaining: Math.max(0, remaining), status };
+  }
+
+  // ── Settings ───────────────────────────────────────────────
+
+  getSettings(): AppSettings {
+    if (!this.data.settings) {
+      this.data.settings = { autoMaintenancePrint: false, theme: 'dark' };
+    }
+    return { ...this.data.settings };
+  }
+
+  updateSettings(partial: Partial<AppSettings>): AppSettings {
+    if (!this.data.settings) {
+      this.data.settings = { autoMaintenancePrint: false, theme: 'dark' };
+    }
+    Object.assign(this.data.settings, partial);
+    this.save();
+    return { ...this.data.settings };
+  }
+
+  // ── Statistics ─────────────────────────────────────────────
+
+  getStatistics() {
+    const printers = this.getPrinters();
+    const events = this.data.events;
+
+    // Events per printer
+    const perPrinter = printers.map(p => {
+      const pEvents = events.filter(e => e.printerId === p.id);
+      return {
+        printerId: p.id,
+        printerName: p.name,
+        totalEvents: pEvents.length,
+        prints: pEvents.filter(e => e.eventType === 'print').length,
+        cleans: pEvents.filter(e => e.eventType === 'clean').length,
+      };
+    });
+
+    // Events per day (last 30 days)
+    const now = Date.now();
+    const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+    const dailyMap = new Map<string, { prints: number; cleans: number }>();
+    for (let d = 0; d < 30; d++) {
+      const date = new Date(now - d * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      dailyMap.set(date, { prints: 0, cleans: 0 });
+    }
+    for (const e of events) {
+      const ts = new Date(e.eventDate).getTime();
+      if (ts >= thirtyDaysAgo) {
+        const date = new Date(e.eventDate).toISOString().slice(0, 10);
+        const entry = dailyMap.get(date);
+        if (entry) {
+          if (e.eventType === 'print') entry.prints++;
+          else entry.cleans++;
+        }
+      }
+    }
+    const daily = Array.from(dailyMap.entries())
+      .map(([date, counts]) => ({ date, ...counts }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    return {
+      totalPrinters: printers.length,
+      totalEvents: events.length,
+      perPrinter,
+      daily,
+    };
+  }
+
+  // ── Backup / Restore ──────────────────────────────────────
+
+  exportData(): string {
+    return JSON.stringify(this.data, null, 2);
+  }
+
+  importData(json: string): boolean {
+    try {
+      const parsed = JSON.parse(json);
+      if (!parsed.printers || !parsed.events) return false;
+      this.data = parsed;
+      if (!this.data.settings) {
+        this.data.settings = { autoMaintenancePrint: false, theme: 'dark' };
+      }
+      this.save();
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 

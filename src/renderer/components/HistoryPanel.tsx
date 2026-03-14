@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MaintenanceEventWithPrinter } from '../types';
+import { useTheme } from '../ThemeContext';
 
 interface HistoryPanelProps {
   printerId?: number;
@@ -7,6 +8,8 @@ interface HistoryPanelProps {
 }
 
 export default function HistoryPanel({ printerId, onClose }: HistoryPanelProps) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const [events, setEvents] = useState<MaintenanceEventWithPrinter[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'print' | 'clean'>('all');
@@ -33,13 +36,13 @@ export default function HistoryPanel({ printerId, onClose }: HistoryPanelProps) 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>
       <div
-        className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl max-h-[80vh] shadow-2xl flex flex-col"
+        className={`${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'} border rounded-xl w-full max-w-2xl max-h-[80vh] shadow-2xl flex flex-col`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-gray-800">
+        <div className={`flex items-center justify-between p-5 border-b ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
           <h2 className="text-xl font-bold">Maintenance History</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+          <button onClick={onClose} className={`${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'} transition-colors`}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -55,13 +58,13 @@ export default function HistoryPanel({ printerId, onClose }: HistoryPanelProps) 
               className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
                 filter === f
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  : `${isDark ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`
               }`}
             >
               {f === 'all' ? 'All' : f === 'print' ? 'Prints' : 'Cleans'}
             </button>
           ))}
-          <span className="ml-auto text-sm text-gray-500 self-center">
+          <span className={`ml-auto text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'} self-center`}>
             {displayEvents.length} event{displayEvents.length !== 1 ? 's' : ''}
           </span>
         </div>
@@ -69,13 +72,13 @@ export default function HistoryPanel({ printerId, onClose }: HistoryPanelProps) 
         {/* Event list */}
         <div className="flex-1 overflow-y-auto p-5">
           {loading ? (
-            <p className="text-center text-gray-500 py-8">Loading...</p>
+            <p className={`text-center ${isDark ? 'text-gray-500' : 'text-gray-400'} py-8`}>Loading...</p>
           ) : displayEvents.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">No maintenance events recorded yet.</p>
+            <p className={`text-center ${isDark ? 'text-gray-500' : 'text-gray-400'} py-8`}>No maintenance events recorded yet.</p>
           ) : (
             <div className="space-y-2">
               {displayEvents.map((event) => (
-                <div key={event.id} className="flex items-center gap-3 p-3 bg-gray-800/50 rounded-lg">
+                <div key={event.id} className={`flex items-center gap-3 p-3 ${isDark ? 'bg-gray-800/50' : 'bg-gray-50'} rounded-lg`}>
                   {/* Icon */}
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
                     event.eventType === 'print' ? 'bg-blue-600/20 text-blue-400' : 'bg-purple-600/20 text-purple-400'
@@ -102,16 +105,16 @@ export default function HistoryPanel({ printerId, onClose }: HistoryPanelProps) 
                       </span>
                     </div>
                     {event.notes && (
-                      <p className="text-xs text-gray-500 truncate mt-0.5">{event.notes}</p>
+                      <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} truncate mt-0.5`}>{event.notes}</p>
                     )}
                   </div>
 
                   {/* Date */}
                   <div className="text-right shrink-0">
-                    <p className="text-sm text-gray-400">
+                    <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                       {new Date(event.eventDate).toLocaleDateString()}
                     </p>
-                    <p className="text-xs text-gray-600">
+                    <p className={`text-xs ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
                       {new Date(event.eventDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
