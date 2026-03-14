@@ -25,17 +25,19 @@ function checkStatuses(): void {
     for (const printer of printers) {
       if (printer.status === 'overdue') {
         notify(
-          `${printer.name} — OVERDUE`,
-          'Maintenance overdue! Print or clean this printer immediately.',
+          `⚠ ${printer.name} — OVERDUE`,
+          'Maintenance overdue! Print or clean this printer immediately to prevent nozzle clogging.',
+          'critical',
         );
       } else if (printer.status === 'urgent') {
         notify(
-          `${printer.name} — Urgent`,
-          'Less than 1 day remaining before maintenance is needed.',
+          `🔴 ${printer.name} — Urgent`,
+          'Less than 1 day remaining before maintenance is needed!',
+          'critical',
         );
       } else if (printer.status === 'warning') {
         notify(
-          `${printer.name} — Warning`,
+          `🟡 ${printer.name} — Warning`,
           `${Math.round(printer.daysRemaining)} day(s) remaining before maintenance is needed.`,
         );
       }
@@ -45,8 +47,13 @@ function checkStatuses(): void {
   }
 }
 
-function notify(title: string, body: string): void {
+function notify(title: string, body: string, urgency: 'normal' | 'critical' = 'normal'): void {
   if (Notification.isSupported()) {
-    new Notification({ title, body }).show();
+    new Notification({
+      title,
+      body,
+      urgency,
+      silent: false,
+    }).show();
   }
 }

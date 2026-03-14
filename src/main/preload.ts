@@ -11,4 +11,9 @@ contextBridge.exposeInMainWorld('api', {
   addEvent: (event: { printerId: number; eventType: string; notes?: string }) =>
     ipcRenderer.invoke('add-event', event),
   getPrintersWithStatus: () => ipcRenderer.invoke('get-printers-with-status'),
+  // Phase 2
+  detectSystemPrinters: () => ipcRenderer.invoke('detect-system-printers'),
+  getAutoStart: () => ipcRenderer.invoke('get-autostart'),
+  setAutoStart: (enabled: boolean) => ipcRenderer.invoke('set-autostart', enabled),
+  getAllEvents: () => ipcRenderer.invoke('get-all-events'),
 });

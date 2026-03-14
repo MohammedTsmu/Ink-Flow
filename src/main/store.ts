@@ -126,6 +126,13 @@ class Store {
     return events.length > 0 ? events[0] : null;
   }
 
+  getAllEvents(): (EventRecord & { printerName: string })[] {
+    const printerMap = new Map(this.data.printers.map(p => [p.id, p.name]));
+    return [...this.data.events]
+      .sort((a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime())
+      .map(e => ({ ...e, printerName: printerMap.get(e.printerId) || 'Unknown' }));
+  }
+
   // ── Status ────────────────────────────────────────────────
 
   getPrintersWithStatus() {

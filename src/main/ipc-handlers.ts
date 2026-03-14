@@ -1,5 +1,7 @@
 import { ipcMain } from 'electron';
 import { getStore } from './store';
+import { detectSystemPrinters } from './printer-detect';
+import { isAutoStartEnabled, setAutoStart } from './autostart';
 
 export function setupIpcHandlers(): void {
   const store = getStore();
@@ -17,4 +19,14 @@ export function setupIpcHandlers(): void {
   ipcMain.handle('add-event', (_e, input) => store.addEvent(input));
 
   ipcMain.handle('get-printers-with-status', () => store.getPrintersWithStatus());
+
+  // Phase 2: Auto-detect system printers
+  ipcMain.handle('detect-system-printers', () => detectSystemPrinters());
+
+  // Phase 2: Auto-start
+  ipcMain.handle('get-autostart', () => isAutoStartEnabled());
+  ipcMain.handle('set-autostart', (_e, enabled: boolean) => setAutoStart(enabled));
+
+  // Phase 2: Get all events (for history view)
+  ipcMain.handle('get-all-events', () => store.getAllEvents());
 }

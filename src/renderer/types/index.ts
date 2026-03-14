@@ -26,6 +26,17 @@ export interface PrinterWithStatus extends Printer {
   status: 'good' | 'warning' | 'urgent' | 'overdue';
 }
 
+export interface SystemPrinter {
+  name: string;
+  portName: string;
+  driverName: string;
+  shared: boolean;
+}
+
+export interface MaintenanceEventWithPrinter extends MaintenanceEvent {
+  printerName: string;
+}
+
 declare global {
   interface Window {
     api: {
@@ -36,6 +47,11 @@ declare global {
       getEvents: (printerId: number) => Promise<MaintenanceEvent[]>;
       addEvent: (event: { printerId: number; eventType: string; notes?: string }) => Promise<MaintenanceEvent>;
       getPrintersWithStatus: () => Promise<PrinterWithStatus[]>;
+      // Phase 2
+      detectSystemPrinters: () => Promise<SystemPrinter[]>;
+      getAutoStart: () => Promise<boolean>;
+      setAutoStart: (enabled: boolean) => Promise<void>;
+      getAllEvents: () => Promise<MaintenanceEventWithPrinter[]>;
     };
   }
 }

@@ -5,6 +5,7 @@ interface PrinterCardProps {
   printer: PrinterWithStatus;
   onEdit: () => void;
   onRefresh: () => void;
+  onShowHistory: (printerId: number) => void;
 }
 
 const statusStyles = {
@@ -14,7 +15,7 @@ const statusStyles = {
   overdue: { bg: 'bg-red-500',    light: 'bg-red-500/20',    text: 'text-red-400',    label: 'Overdue' },
 };
 
-export default function PrinterCard({ printer, onEdit, onRefresh }: PrinterCardProps) {
+export default function PrinterCard({ printer, onEdit, onRefresh, onShowHistory }: PrinterCardProps) {
   const [loading, setLoading] = useState(false);
   const style = statusStyles[printer.status];
   const progress = Math.min(100, Math.max(0, (printer.daysRemaining / printer.maxIdleDays) * 100));
@@ -94,13 +95,19 @@ export default function PrinterCard({ printer, onEdit, onRefresh }: PrinterCardP
         </button>
       </div>
 
-      {/* Edit / Delete */}
+      {/* Edit / History / Delete */}
       <div className="flex gap-2 mt-2">
         <button
           onClick={onEdit}
           className="flex-1 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-400 rounded-lg text-sm transition-colors"
         >
           Edit
+        </button>
+        <button
+          onClick={() => onShowHistory(printer.id)}
+          className="flex-1 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-400 rounded-lg text-sm transition-colors"
+        >
+          History
         </button>
         <button
           onClick={handleDelete}
