@@ -51,6 +51,10 @@ export function setAutoStart(enabled: boolean): void {
       try { fs.unlinkSync(shortcutPath); } catch {}
     }
   } else {
-    app.setLoginItemSettings({ openAtLogin: enabled });
+    app.setLoginItemSettings({
+      openAtLogin: enabled,
+      path: process.execPath,
+      args: [path.resolve(app.getAppPath()), '--hidden'],
+    });
   }
 }

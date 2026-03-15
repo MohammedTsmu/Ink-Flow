@@ -38,8 +38,11 @@ function createWindow(): void {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   }
 
+  const startHidden = process.argv.includes('--hidden');
   mainWindow.once('ready-to-show', () => {
-    mainWindow?.show();
+    if (!startHidden) {
+      mainWindow?.show();
+    }
   });
 
   mainWindow.on('close', (e) => {
