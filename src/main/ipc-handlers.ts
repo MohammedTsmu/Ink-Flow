@@ -37,6 +37,7 @@ export function setupIpcHandlers(): void {
 
   // Phase 2: Get all events (for history view)
   ipcMain.handle('get-all-events', () => store.getAllEvents());
+  ipcMain.handle('delete-event', (_e, eventId: number) => store.deleteEvent(eventId));
 
   // Phase 3: Settings
   ipcMain.handle('get-settings', () => store.getSettings());

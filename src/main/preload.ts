@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('api', {
   getAutoStart: () => ipcRenderer.invoke('get-autostart'),
   setAutoStart: (enabled: boolean) => ipcRenderer.invoke('set-autostart', enabled),
   getAllEvents: () => ipcRenderer.invoke('get-all-events'),
+  deleteEvent: (eventId: number) => ipcRenderer.invoke('delete-event', eventId),
   // Phase 3
   getSettings: () => ipcRenderer.invoke('get-settings'),
   updateSettings: (partial: Record<string, unknown>) => ipcRenderer.invoke('update-settings', partial),

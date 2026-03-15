@@ -170,6 +170,11 @@ class Store {
       .map(e => ({ ...e, printerName: printerMap.get(e.printerId) || 'Unknown' }));
   }
 
+  deleteEvent(eventId: number): void {
+    this.data.events = this.data.events.filter(e => e.id !== eventId);
+    this.save();
+  }
+
   // ── Status ────────────────────────────────────────────────
 
   getPrintersWithStatus() {

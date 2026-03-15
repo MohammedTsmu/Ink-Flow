@@ -86,6 +86,7 @@ declare global {
       getAutoStart: () => Promise<boolean>;
       setAutoStart: (enabled: boolean) => Promise<void>;
       getAllEvents: () => Promise<MaintenanceEventWithPrinter[]>;
+      deleteEvent: (eventId: number) => Promise<void>;
       // Phase 3
       getSettings: () => Promise<AppSettings>;
       updateSettings: (partial: Partial<AppSettings>) => Promise<AppSettings>;
