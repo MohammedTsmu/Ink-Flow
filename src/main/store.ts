@@ -239,6 +239,19 @@ class Store {
     };
   }
 
+  // ── Test Helpers ───────────────────────────────────────────
+
+  simulateOverdue(printerId: number, daysAgo: number): boolean {
+    const events = this.data.events.filter(e => e.printerId === printerId);
+    if (events.length === 0) return false;
+    // Backdate the most recent event for this printer
+    const sorted = events.sort((a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime());
+    const pastDate = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString();
+    sorted[0].eventDate = pastDate;
+    this.save();
+    return true;
+  }
+
   // ── Print Monitor ─────────────────────────────────────────
 
   getLastPrintCheckTime(): string {

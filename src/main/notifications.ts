@@ -1,6 +1,8 @@
 import { Notification } from 'electron';
 import { getStore } from './store';
 import { runAutoMaintenancePrints } from './auto-print';
+import { getMainWindow } from './main';
+import { showAlertPopup } from './alert-window';
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -9,6 +11,11 @@ export function startNotificationScheduler(): void {
   setTimeout(checkStatuses, 10_000);
   // Then check every hour
   intervalId = setInterval(checkStatuses, 60 * 60 * 1000);
+}
+
+/** Manually trigger a notification check (for testing). */
+export function runNotificationCheck(): void {
+  checkStatuses();
 }
 
 export function stopNotificationScheduler(): void {
@@ -23,38 +30,63 @@ function checkStatuses(): void {
     const store = getStore();
     const printers = store.getPrintersWithStatus();
 
+    let needsAttention = false;
+    const alerts: Array<{ name: string; status: string; level: string; message: string }> = [];
+
     for (const printer of printers) {
       if (printer.status === 'overdue') {
+        needsAttention = true;
         const daysOverdue = Math.abs(Math.round(printer.daysRemaining * 10) / 10);
-        let body: string;
-        let title: string;
+        let level: string;
+        let message: string;
 
         if (daysOverdue >= printer.maxIdleDays * 2) {
-          // Severely overdue — 2x the max idle time
-          title = `🚨 CRITICAL: ${printer.name}`;
-          body = `${daysOverdue} days overdue! Nozzles are very likely clogged. Turn on the printer and run a deep clean cycle immediately.`;
+          level = 'critical';
+          message = `${daysOverdue} days overdue! Nozzles are very likely clogged. Turn on the printer and run a deep clean cycle immediately.`;
         } else if (daysOverdue >= printer.maxIdleDays) {
-          // Very overdue — past the max again
-          title = `🚨 ${printer.name} — SEVERELY OVERDUE`;
-          body = `${daysOverdue} days overdue! High risk of permanent nozzle damage. Turn on and clean ASAP.`;
+          level = 'severe';
+          message = `${daysOverdue} days overdue! High risk of permanent nozzle damage. Turn on and clean ASAP.`;
         } else {
-          title = `⚠ ${printer.name} — OVERDUE`;
-          body = `${daysOverdue} day(s) overdue. Print or clean this printer soon to prevent clogging.`;
+          level = 'overdue';
+          message = `${daysOverdue} day(s) overdue. Print or clean this printer soon to prevent clogging.`;
         }
 
-        notify(title, body, 'critical');
+        alerts.push({ name: printer.name, status: printer.status, level, message });
       } else if (printer.status === 'urgent') {
-        notify(
-          `🔴 ${printer.name} — Urgent`,
-          'Less than 1 day remaining before maintenance is needed!',
-          'critical',
-        );
+        needsAttention = true;
+        alerts.push({
+          name: printer.name,
+          status: printer.status,
+          level: 'urgent',
+          message: 'Less than 1 day remaining before maintenance is needed!',
+        });
       } else if (printer.status === 'warning') {
-        notify(
-          `🟡 ${printer.name} — Warning`,
-          `${Math.round(printer.daysRemaining)} day(s) remaining before maintenance is needed.`,
-        );
+        needsAttention = true;
+        alerts.push({
+          name: printer.name,
+          status: printer.status,
+          level: 'warning',
+          message: `${Math.round(printer.daysRemaining)} day(s) remaining before maintenance is needed.`,
+        });
       }
+    }
+
+    // Show the standalone popup alert (appears on top of everything, even without the main window)
+    if (alerts.length > 0) {
+      showAlertPopup(alerts);
+    }
+
+    // Also send alerts to the renderer in-app modal (if main window is visible)
+    if (alerts.length > 0) {
+      const win = getMainWindow();
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('printer-alerts', alerts);
+      }
+    }
+
+    // Flash taskbar and bring window forward so user notices
+    if (needsAttention) {
+      grabAttention();
     }
   } catch {
     // Silently ignore — store may not be ready yet
@@ -64,12 +96,35 @@ function checkStatuses(): void {
   runAutoMaintenancePrints();
 }
 
-function notify(title: string, body: string, urgency: 'normal' | 'critical' = 'normal'): void {
+/** Flash the taskbar icon and show the window so the user notices alerts. */
+function grabAttention(): void {
+  const win = getMainWindow();
+  if (!win) return;
+
+  // Flash taskbar until the user focuses the window
+  win.flashFrame(true);
+
+  // If the window is hidden, show it
+  if (!win.isVisible()) {
+    win.show();
+  }
+
+  // If minimized, restore it
+  if (win.isMinimized()) {
+    win.restore();
+  }
+
+  // Stop flashing once the user focuses the window
+  win.once('focus', () => {
+    win.flashFrame(false);
+  });
+}
+
+function notify(title: string, body: string, _urgency: 'normal' | 'critical' = 'normal'): void {
   if (Notification.isSupported()) {
     new Notification({
       title,
       body,
-      urgency,
       silent: false,
     }).show();
   }

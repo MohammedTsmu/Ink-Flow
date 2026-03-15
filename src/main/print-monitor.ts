@@ -116,6 +116,9 @@ function queryPrintLog(sinceSeconds: number): Promise<PrintEvent[]> {
   });
 }
 
+/** Manually trigger a print log check (for testing). */
+export { checkPrintEvents };
+
 /**
  * Starts monitoring the Windows print spooler for real print jobs.
  * Checks every 5 minutes.

@@ -9,6 +9,10 @@ import { startPrintMonitor, stopPrintMonitor } from './print-monitor';
 let mainWindow: BrowserWindow | null = null;
 let isQuitting = false;
 
+export function getMainWindow(): BrowserWindow | null {
+  return mainWindow;
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1100,

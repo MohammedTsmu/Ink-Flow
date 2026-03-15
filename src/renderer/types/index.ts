@@ -63,6 +63,13 @@ export interface Statistics {
   daily: DailyStats[];
 }
 
+export interface AlertItem {
+  name: string;
+  status: string;
+  level: string;
+  message: string;
+}
+
 declare global {
   interface Window {
     api: {
@@ -86,6 +93,13 @@ declare global {
       sendTestPrint: (printerName: string, printerId: number) => Promise<{ success: boolean; reason: string | null }>;
       exportBackup: () => Promise<boolean>;
       importBackup: () => Promise<boolean>;
+      // Test / Debug
+      testSimulateOverdue: (printerId: number, daysAgo: number) => Promise<boolean>;
+      testTriggerNotifications: () => Promise<boolean>;
+      testTriggerPrintMonitor: () => Promise<boolean>;
+      testTriggerAutoMaintenance: () => Promise<boolean>;
+      // Alert listener
+      onPrinterAlerts: (callback: (alerts: AlertItem[]) => void) => () => void;
     };
   }
 }
