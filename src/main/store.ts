@@ -48,6 +48,7 @@ class Store {
     try {
       const raw = fs.readFileSync(this.filePath, 'utf-8');
       this.data = JSON.parse(raw);
+      this.migrate();
     } catch {
       this.data = {
         printers: [], events: [], nextPrinterId: 1, nextEventId: 1,
@@ -58,12 +59,36 @@ class Store {
     }
   }
 
+  /** Ensure all fields exist for data created by older versions. */
+  private migrate(): void {
+    if (!this.data.settings) {
+      this.data.settings = { autoMaintenancePrint: false, theme: 'dark' };
+    }
+    if (!this.data.lastPrintCheckTime) {
+      this.data.lastPrintCheckTime = new Date().toISOString();
+    }
+    if (!Array.isArray(this.data.printers)) this.data.printers = [];
+    if (!Array.isArray(this.data.events)) this.data.events = [];
+    // Recalculate ID counters to prevent duplicates
+    const maxPrinterId = this.data.printers.reduce((m, p) => Math.max(m, p.id), 0);
+    const maxEventId = this.data.events.reduce((m, e) => Math.max(m, e.id), 0);
+    if (!this.data.nextPrinterId || this.data.nextPrinterId <= maxPrinterId) {
+      this.data.nextPrinterId = maxPrinterId + 1;
+    }
+    if (!this.data.nextEventId || this.data.nextEventId <= maxEventId) {
+      this.data.nextEventId = maxEventId + 1;
+    }
+  }
+
   private save(): void {
     const dir = path.dirname(this.filePath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    fs.writeFileSync(this.filePath, JSON.stringify(this.data, null, 2), 'utf-8');
+    // Atomic write: write to temp file then rename to prevent corruption
+    const tmpPath = this.filePath + '.tmp';
+    fs.writeFileSync(tmpPath, JSON.stringify(this.data, null, 2), 'utf-8');
+    fs.renameSync(tmpPath, this.filePath);
   }
 
   // ── Printers ──────────────────────────────────────────────
@@ -85,6 +110,7 @@ class Store {
       updatedAt: now,
     };
     this.data.printers.push(printer);
+    this.save();
     // Create initial maintenance event so the countdown starts now
     this.addEvent({ printerId: printer.id, eventType: 'clean', notes: 'Initial setup – timer started' });
     return printer;
@@ -272,11 +298,9 @@ class Store {
   importData(json: string): boolean {
     try {
       const parsed = JSON.parse(json);
-      if (!parsed.printers || !parsed.events) return false;
+      if (!Array.isArray(parsed.printers) || !Array.isArray(parsed.events)) return false;
       this.data = parsed;
-      if (!this.data.settings) {
-        this.data.settings = { autoMaintenancePrint: false, theme: 'dark' };
-      }
+      this.migrate();
       this.save();
       return true;
     } catch {

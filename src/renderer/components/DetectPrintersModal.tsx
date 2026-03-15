@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { SystemPrinter } from '../types';
 import { useTheme } from '../ThemeContext';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface DetectPrintersModalProps {
   onClose: () => void;
@@ -8,6 +9,7 @@ interface DetectPrintersModalProps {
 }
 
 export default function DetectPrintersModal({ onClose, onSave }: DetectPrintersModalProps) {
+  useEscapeKey(onClose);
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [systemPrinters, setSystemPrinters] = useState<SystemPrinter[]>([]);

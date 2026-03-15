@@ -1,14 +1,14 @@
-import { Notification } from 'electron';
 import { getStore } from './store';
 import { runAutoMaintenancePrints } from './auto-print';
 import { getMainWindow } from './main';
 import { showAlertPopup } from './alert-window';
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
+let initialTimeout: ReturnType<typeof setTimeout> | null = null;
 
 export function startNotificationScheduler(): void {
   // Check once on startup (delayed 10s to let the app settle)
-  setTimeout(checkStatuses, 10_000);
+  initialTimeout = setTimeout(() => { checkStatuses(); initialTimeout = null; }, 10_000);
   // Then check every hour
   intervalId = setInterval(checkStatuses, 60 * 60 * 1000);
 }
@@ -19,6 +19,10 @@ export function runNotificationCheck(): void {
 }
 
 export function stopNotificationScheduler(): void {
+  if (initialTimeout) {
+    clearTimeout(initialTimeout);
+    initialTimeout = null;
+  }
   if (intervalId) {
     clearInterval(intervalId);
     intervalId = null;
@@ -118,14 +122,4 @@ function grabAttention(): void {
   win.once('focus', () => {
     win.flashFrame(false);
   });
-}
-
-function notify(title: string, body: string, _urgency: 'normal' | 'critical' = 'normal'): void {
-  if (Notification.isSupported()) {
-    new Notification({
-      title,
-      body,
-      silent: false,
-    }).show();
-  }
 }

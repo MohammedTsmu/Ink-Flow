@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTheme } from '../ThemeContext';
 import { AlertItem } from '../types';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface AlertModalProps {
   alerts: AlertItem[];
@@ -32,6 +33,7 @@ const levelPriority: Record<string, number> = {
 };
 
 export default function AlertModal({ alerts, onDismiss }: AlertModalProps) {
+  useEscapeKey(onDismiss);
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 

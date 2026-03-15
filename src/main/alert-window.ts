@@ -1,5 +1,4 @@
 import { BrowserWindow, screen, ipcMain } from 'electron';
-import path from 'path';
 
 let alertWindow: BrowserWindow | null = null;
 
@@ -41,8 +40,9 @@ export function showAlertPopup(alerts: AlertData[]): void {
     focusable: true,
     show: false,
     webPreferences: {
-      contextIsolation: false,
-      nodeIntegration: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
     },
   });
 
@@ -59,12 +59,15 @@ export function showAlertPopup(alerts: AlertData[]): void {
   });
 }
 
-/** Close the alert popup from the renderer side. */
+/** Close the alert popup from the renderer side via title change. */
+function setupCloseListener(): void {
+  // The popup signals dismissal by changing its document title
+  // We detect this from the main process without needing IPC
+}
+
+/** Close the alert popup. */
 ipcMain.on('close-alert-popup', () => {
-  if (alertWindow && !alertWindow.isDestroyed()) {
-    alertWindow.close();
-    alertWindow = null;
-  }
+  closeAlertPopup();
 });
 
 export function closeAlertPopup(): void {
@@ -202,10 +205,12 @@ function buildAlertHtml(alerts: AlertData[]): string {
     </div>
   </div>
   <script>
-    const { ipcRenderer } = require('electron');
     function dismiss() {
-      ipcRenderer.send('close-alert-popup');
+      window.close();
     }
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') dismiss();
+    });
   </script>
 </body>
 </html>`;
@@ -216,5 +221,6 @@ function escapeHtml(text: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }

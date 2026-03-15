@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../ThemeContext';
 import { PrinterWithStatus } from '../types';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface TestPanelProps {
   onClose: () => void;
@@ -8,6 +9,7 @@ interface TestPanelProps {
 }
 
 export default function TestPanel({ onClose, onRefresh }: TestPanelProps) {
+  useEscapeKey(onClose);
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [printers, setPrinters] = useState<PrinterWithStatus[]>([]);

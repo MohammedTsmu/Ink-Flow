@@ -1,8 +1,8 @@
 import { exec } from 'child_process';
-import { Notification } from 'electron';
 import { getStore } from './store';
 
 let monitorInterval: ReturnType<typeof setInterval> | null = null;
+let initialTimeout: ReturnType<typeof setTimeout> | null = null;
 
 /**
  * Queries the Windows PrintService Operational event log for recent
@@ -125,13 +125,17 @@ export { checkPrintEvents };
  */
 export function startPrintMonitor(): void {
   // Run an initial check shortly after startup (30 seconds)
-  setTimeout(() => { checkPrintEvents(); }, 30_000);
+  initialTimeout = setTimeout(() => { checkPrintEvents(); initialTimeout = null; }, 30_000);
 
   // Then check every 5 minutes
   monitorInterval = setInterval(() => { checkPrintEvents(); }, 5 * 60 * 1000);
 }
 
 export function stopPrintMonitor(): void {
+  if (initialTimeout) {
+    clearTimeout(initialTimeout);
+    initialTimeout = null;
+  }
   if (monitorInterval) {
     clearInterval(monitorInterval);
     monitorInterval = null;

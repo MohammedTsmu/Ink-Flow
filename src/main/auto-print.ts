@@ -33,10 +33,10 @@ export function sendTestPrint(printerName: string): Promise<boolean> {
     }
 
     // Launch notepad.exe directly (no shell) with /p flag for silent print
-    execFile('notepad.exe', ['/p', tempFile], { timeout: 30000 }, () => {
+    execFile('notepad.exe', ['/p', tempFile], { timeout: 30000 }, (error) => {
       // Clean up temp file regardless of print result
       try { fs.unlinkSync(tempFile); } catch { /* ignore */ }
-      resolve(true);
+      resolve(!error);
     });
   });
 }

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../ThemeContext';
 import { AppSettings } from '../types';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface SettingsPanelProps {
   onClose: () => void;
 }
 
 export default function SettingsPanel({ onClose }: SettingsPanelProps) {
+  useEscapeKey(onClose);
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [autoStart, setAutoStart] = useState(false);

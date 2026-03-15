@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PrinterWithStatus } from '../types';
 import { useTheme } from '../ThemeContext';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface EditPrinterModalProps {
   printer: PrinterWithStatus;
@@ -9,6 +10,7 @@ interface EditPrinterModalProps {
 }
 
 export default function EditPrinterModal({ printer, onClose, onSave }: EditPrinterModalProps) {
+  useEscapeKey(onClose);
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [name, setName] = useState(printer.name);

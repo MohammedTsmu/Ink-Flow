@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme } from '../ThemeContext';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface AddPrinterModalProps {
   onClose: () => void;
@@ -7,6 +8,7 @@ interface AddPrinterModalProps {
 }
 
 export default function AddPrinterModal({ onClose, onSave }: AddPrinterModalProps) {
+  useEscapeKey(onClose);
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [name, setName] = useState('');

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Statistics } from '../types';
 import { useTheme } from '../ThemeContext';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface StatisticsPanelProps {
   onClose: () => void;
 }
 
 export default function StatisticsPanel({ onClose }: StatisticsPanelProps) {
+  useEscapeKey(onClose);
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [stats, setStats] = useState<Statistics | null>(null);

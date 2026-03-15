@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MaintenanceEventWithPrinter } from '../types';
 import { useTheme } from '../ThemeContext';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface HistoryPanelProps {
   printerId?: number;
@@ -8,6 +9,7 @@ interface HistoryPanelProps {
 }
 
 export default function HistoryPanel({ printerId, onClose }: HistoryPanelProps) {
+  useEscapeKey(onClose);
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [events, setEvents] = useState<MaintenanceEventWithPrinter[]>([]);

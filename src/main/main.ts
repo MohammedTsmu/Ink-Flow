@@ -1,12 +1,14 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, Tray } from 'electron';
 import path from 'path';
 import { initStore } from './store';
 import { setupIpcHandlers } from './ipc-handlers';
 import { createTray } from './tray';
-import { startNotificationScheduler } from './notifications';
+import { startNotificationScheduler, stopNotificationScheduler } from './notifications';
 import { startPrintMonitor, stopPrintMonitor } from './print-monitor';
+import { setMainWindow } from './window-ref';
 
 let mainWindow: BrowserWindow | null = null;
+let tray: Tray | null = null;
 let isQuitting = false;
 
 export function getMainWindow(): BrowserWindow | null {
@@ -53,13 +55,15 @@ app.setAppUserModelId('com.inkflow.app');
 app.on('before-quit', () => {
   isQuitting = true;
   stopPrintMonitor();
+  stopNotificationScheduler();
 });
 
 app.whenReady().then(() => {
   initStore();
   setupIpcHandlers();
   createWindow();
-  createTray(mainWindow!);
+  setMainWindow(mainWindow!);
+  tray = createTray(mainWindow!);
   startNotificationScheduler();
   startPrintMonitor();
 });
