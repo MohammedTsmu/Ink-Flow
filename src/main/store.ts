@@ -112,7 +112,7 @@ class Store {
     this.data.printers.push(printer);
     this.save();
     // Create initial maintenance event so the countdown starts now
-    this.addEvent({ printerId: printer.id, eventType: 'clean', notes: 'Initial setup – timer started' });
+    this.addEvent({ printerId: printer.id, eventType: 'print', notes: 'Initial setup – timer started' });
     return printer;
   }
 
