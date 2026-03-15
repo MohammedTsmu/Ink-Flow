@@ -11,6 +11,8 @@ export function setupIpcHandlers(): void {
 
   ipcMain.handle('get-printers', () => store.getPrinters());
 
+  ipcMain.handle('get-app-version', () => app.getVersion());
+
   ipcMain.handle('add-printer', (_e, input) => store.addPrinter(input));
 
   ipcMain.handle('update-printer', (_e, id, input) => store.updatePrinter(id, input));

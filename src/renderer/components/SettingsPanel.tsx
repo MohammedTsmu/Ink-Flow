@@ -13,6 +13,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   const isDark = theme === 'dark';
   const [autoStart, setAutoStart] = useState(false);
   const [autoMaintenancePrint, setAutoMaintenancePrint] = useState(false);
+  const [appVersion, setAppVersion] = useState('');
   const [loading, setLoading] = useState(true);
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
 
@@ -23,12 +24,14 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   const loadSettings = async () => {
     setLoading(true);
     try {
-      const [enabled, settings] = await Promise.all([
+      const [enabled, settings, version] = await Promise.all([
         window.api.getAutoStart(),
         window.api.getSettings(),
+        window.api.getAppVersion(),
       ]);
       setAutoStart(enabled);
       setAutoMaintenancePrint(settings.autoMaintenancePrint);
+      setAppVersion(version);
     } finally {
       setLoading(false);
     }
@@ -149,7 +152,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
             {/* About */}
             <div className={`p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg`}>
               <p className="font-medium text-sm">About</p>
-              <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-1`}>Ink Flow v1.0.0 — Printer Maintenance Tracker</p>
+              <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-1`}>Ink Flow v{appVersion} — Printer Maintenance Tracker</p>
               <p className={`text-xs ${isDark ? 'text-gray-600' : 'text-gray-400'} mt-0.5`}>Keeps your liquid-ink printers healthy by tracking idle time.</p>
             </div>
           </div>

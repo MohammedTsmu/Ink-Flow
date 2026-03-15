@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('api', {
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   getPrinters: () => ipcRenderer.invoke('get-printers'),
   addPrinter: (printer: { name: string; model: string; inkType: string; maxIdleDays: number; warningDays: number }) =>
     ipcRenderer.invoke('add-printer', printer),

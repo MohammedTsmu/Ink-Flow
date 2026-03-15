@@ -73,6 +73,7 @@ export interface AlertItem {
 declare global {
   interface Window {
     api: {
+      getAppVersion: () => Promise<string>;
       getPrinters: () => Promise<Printer[]>;
       addPrinter: (printer: PrinterData) => Promise<Printer>;
       updatePrinter: (id: number, printer: Partial<PrinterData>) => Promise<Printer>;
