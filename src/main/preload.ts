@@ -25,11 +25,6 @@ contextBridge.exposeInMainWorld('api', {
   sendTestPrint: (printerName: string, printerId: number) => ipcRenderer.invoke('send-test-print', printerName, printerId),
   exportBackup: () => ipcRenderer.invoke('export-backup'),
   importBackup: () => ipcRenderer.invoke('import-backup'),
-  // Test / Debug
-  testSimulateOverdue: (printerId: number, daysAgo: number) => ipcRenderer.invoke('test-simulate-overdue', printerId, daysAgo),
-  testTriggerNotifications: () => ipcRenderer.invoke('test-trigger-notifications'),
-  testTriggerPrintMonitor: () => ipcRenderer.invoke('test-trigger-print-monitor'),
-  testTriggerAutoMaintenance: () => ipcRenderer.invoke('test-trigger-auto-maintenance'),
   // Alert listener
   onPrinterAlerts: (callback: (alerts: Array<{ name: string; status: string; level: string; message: string }>) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, alerts: Array<{ name: string; status: string; level: string; message: string }>) => callback(alerts);

@@ -12,11 +12,10 @@ interface DashboardProps {
   onShowHistory: () => void;
   onShowSettings: () => void;
   onShowStats: () => void;
-  onShowTest: () => void;
   onShowPrinterHistory: (printerId: number) => void;
 }
 
-export default function Dashboard({ printers, onAddPrinter, onEditPrinter, onRefresh, onDetectPrinters, onShowHistory, onShowSettings, onShowStats, onShowTest, onShowPrinterHistory }: DashboardProps) {
+export default function Dashboard({ printers, onAddPrinter, onEditPrinter, onRefresh, onDetectPrinters, onShowHistory, onShowSettings, onShowStats, onShowPrinterHistory }: DashboardProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const overdue = printers.filter(p => p.status === 'overdue').length;
@@ -110,10 +109,6 @@ export default function Dashboard({ printers, onAddPrinter, onEditPrinter, onRef
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
             Settings
-          </button>
-          <button onClick={onShowTest} className={`flex items-center gap-2 px-3 py-2 ${isDark ? 'bg-purple-900/50 hover:bg-purple-800/60 text-purple-300' : 'bg-purple-100 hover:bg-purple-200 text-purple-700'} rounded-lg transition-colors text-sm`}>
-            <span className="text-sm">🧪</span>
-            Test
           </button>
           <button
             onClick={onAddPrinter}

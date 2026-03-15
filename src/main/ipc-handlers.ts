@@ -4,9 +4,7 @@ import path from 'path';
 import { getStore } from './store';
 import { detectSystemPrinters, checkPrinterStatus } from './printer-detect';
 import { isAutoStartEnabled, setAutoStart } from './autostart';
-import { sendTestPrint, runAutoMaintenancePrints } from './auto-print';
-import { checkPrintEvents } from './print-monitor';
-import { runNotificationCheck } from './notifications';
+import { sendTestPrint } from './auto-print';
 
 export function setupIpcHandlers(): void {
   const store = getStore();
@@ -68,31 +66,6 @@ export function setupIpcHandlers(): void {
     });
     if (canceled || !savePath) return false;
     fs.writeFileSync(savePath, store.exportData(), 'utf-8');
-    return true;
-  });
-
-  // ── Test / Debug ──────────────────────────────────────────────────────
-
-  // Simulate overdue: backdate a printer's last event by N days
-  ipcMain.handle('test-simulate-overdue', (_e, printerId: number, daysAgo: number) => {
-    return store.simulateOverdue(printerId, daysAgo);
-  });
-
-  // Trigger notification check immediately
-  ipcMain.handle('test-trigger-notifications', () => {
-    runNotificationCheck();
-    return true;
-  });
-
-  // Trigger print monitor check immediately
-  ipcMain.handle('test-trigger-print-monitor', async () => {
-    await checkPrintEvents();
-    return true;
-  });
-
-  // Trigger auto-maintenance prints immediately
-  ipcMain.handle('test-trigger-auto-maintenance', async () => {
-    await runAutoMaintenancePrints();
     return true;
   });
 
