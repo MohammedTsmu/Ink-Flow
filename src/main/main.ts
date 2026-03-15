@@ -4,6 +4,7 @@ import { initStore } from './store';
 import { setupIpcHandlers } from './ipc-handlers';
 import { createTray } from './tray';
 import { startNotificationScheduler } from './notifications';
+import { startPrintMonitor, stopPrintMonitor } from './print-monitor';
 
 let mainWindow: BrowserWindow | null = null;
 let isQuitting = false;
@@ -47,6 +48,7 @@ app.setAppUserModelId('com.inkflow.app');
 
 app.on('before-quit', () => {
   isQuitting = true;
+  stopPrintMonitor();
 });
 
 app.whenReady().then(() => {
@@ -55,6 +57,7 @@ app.whenReady().then(() => {
   createWindow();
   createTray(mainWindow!);
   startNotificationScheduler();
+  startPrintMonitor();
 });
 
 app.on('window-all-closed', () => {

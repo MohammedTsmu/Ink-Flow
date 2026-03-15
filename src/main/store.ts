@@ -32,6 +32,7 @@ interface StoreData {
   nextPrinterId: number;
   nextEventId: number;
   settings: AppSettings;
+  lastPrintCheckTime: string;
 }
 
 class Store {
@@ -51,6 +52,7 @@ class Store {
       this.data = {
         printers: [], events: [], nextPrinterId: 1, nextEventId: 1,
         settings: { autoMaintenancePrint: false, theme: 'dark' },
+        lastPrintCheckTime: new Date().toISOString(),
       };
       this.save();
     }
@@ -235,6 +237,17 @@ class Store {
       perPrinter,
       daily,
     };
+  }
+
+  // ── Print Monitor ─────────────────────────────────────────
+
+  getLastPrintCheckTime(): string {
+    return this.data.lastPrintCheckTime || new Date().toISOString();
+  }
+
+  setLastPrintCheckTime(iso: string): void {
+    this.data.lastPrintCheckTime = iso;
+    this.save();
   }
 
   // ── Backup / Restore ──────────────────────────────────────
