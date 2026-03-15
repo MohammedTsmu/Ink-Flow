@@ -2,7 +2,7 @@ import { ipcMain, dialog, app } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import { getStore } from './store';
-import { detectSystemPrinters } from './printer-detect';
+import { detectSystemPrinters, checkPrinterStatus } from './printer-detect';
 import { isAutoStartEnabled, setAutoStart } from './autostart';
 import { sendTestPrint } from './auto-print';
 
@@ -26,6 +26,9 @@ export function setupIpcHandlers(): void {
   // Phase 2: Auto-detect system printers
   ipcMain.handle('detect-system-printers', () => detectSystemPrinters());
 
+  // Check if a printer is online/offline
+  ipcMain.handle('check-printer-status', (_e, printerName: string) => checkPrinterStatus(printerName));
+
   // Phase 2: Auto-start
   ipcMain.handle('get-autostart', () => isAutoStartEnabled());
   ipcMain.handle('set-autostart', (_e, enabled: boolean) => setAutoStart(enabled));
@@ -42,11 +45,15 @@ export function setupIpcHandlers(): void {
 
   // Phase 3: Manual test print
   ipcMain.handle('send-test-print', async (_e, printerName: string, printerId: number) => {
+    const status = await checkPrinterStatus(printerName);
+    if (status === 'offline') {
+      return { success: false, reason: 'offline' };
+    }
     const success = await sendTestPrint(printerName);
     if (success) {
       store.addEvent({ printerId, eventType: 'print', notes: 'Manual test print' });
     }
-    return success;
+    return { success, reason: success ? null : 'print-failed' };
   });
 
   // Phase 3: Backup export

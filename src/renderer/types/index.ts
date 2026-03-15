@@ -75,6 +75,7 @@ declare global {
       getPrintersWithStatus: () => Promise<PrinterWithStatus[]>;
       // Phase 2
       detectSystemPrinters: () => Promise<SystemPrinter[]>;
+      checkPrinterStatus: (printerName: string) => Promise<'online' | 'offline' | 'unknown'>;
       getAutoStart: () => Promise<boolean>;
       setAutoStart: (enabled: boolean) => Promise<void>;
       getAllEvents: () => Promise<MaintenanceEventWithPrinter[]>;
@@ -82,7 +83,7 @@ declare global {
       getSettings: () => Promise<AppSettings>;
       updateSettings: (partial: Partial<AppSettings>) => Promise<AppSettings>;
       getStatistics: () => Promise<Statistics>;
-      sendTestPrint: (printerName: string, printerId: number) => Promise<boolean>;
+      sendTestPrint: (printerName: string, printerId: number) => Promise<{ success: boolean; reason: string | null }>;
       exportBackup: () => Promise<boolean>;
       importBackup: () => Promise<boolean>;
     };

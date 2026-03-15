@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { getStore } from './store';
+import { checkPrinterStatus } from './printer-detect';
 import { Notification } from 'electron';
 
 /**
@@ -53,6 +54,16 @@ export async function runAutoMaintenancePrints(): Promise<void> {
       if (printer.status === 'urgent' || printer.status === 'overdue') {
         const settings = store.getSettings();
         if (settings.autoMaintenancePrint) {
+          const printerStatus = await checkPrinterStatus(printer.name);
+          if (printerStatus === 'offline') {
+            if (Notification.isSupported()) {
+              new Notification({
+                title: `Ink Flow — Printer Offline`,
+                body: `"${printer.name}" needs maintenance but is offline. Please turn it on.`,
+              }).show();
+            }
+            continue;
+          }
           const success = await sendTestPrint(printer.name);
           if (success) {
             store.addEvent({

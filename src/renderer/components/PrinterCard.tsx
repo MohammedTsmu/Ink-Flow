@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PrinterWithStatus } from '../types';
 import { useTheme } from '../ThemeContext';
 
@@ -21,8 +21,21 @@ export default function PrinterCard({ printer, onEdit, onRefresh, onShowHistory 
   const isDark = theme === 'dark';
   const [loading, setLoading] = useState(false);
   const [testPrinting, setTestPrinting] = useState(false);
+  const [printMsg, setPrintMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [connectivity, setConnectivity] = useState<'online' | 'offline' | 'unknown'>('unknown');
   const style = statusStyles[printer.status];
   const progress = Math.min(100, Math.max(0, (printer.daysRemaining / printer.maxIdleDays) * 100));
+
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      const status = await window.api.checkPrinterStatus(printer.name);
+      if (!cancelled) setConnectivity(status);
+    };
+    check();
+    const interval = setInterval(check, 60_000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [printer.name]);
 
   const handleMaintenance = async (type: 'print' | 'clean') => {
     setLoading(true);
@@ -35,11 +48,20 @@ export default function PrinterCard({ printer, onEdit, onRefresh, onShowHistory 
   };
 
   const handleTestPrint = async () => {
+    setPrintMsg(null);
     setTestPrinting(true);
     try {
-      await window.api.sendTestPrint(printer.name, printer.id);
-      await window.api.addEvent({ printerId: printer.id, eventType: 'print' });
-      onRefresh();
+      const result = await window.api.sendTestPrint(printer.name, printer.id);
+      if (result.success) {
+        setPrintMsg({ text: 'Test page sent!', ok: true });
+        onRefresh();
+      } else if (result.reason === 'offline') {
+        setPrintMsg({ text: 'Printer is offline. Turn it on and try again.', ok: false });
+        setConnectivity('offline');
+      } else {
+        setPrintMsg({ text: 'Print failed. Check printer connection.', ok: false });
+      }
+      setTimeout(() => setPrintMsg(null), 4000);
     } finally {
       setTestPrinting(false);
     }
@@ -57,8 +79,16 @@ export default function PrinterCard({ printer, onEdit, onRefresh, onShowHistory 
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="min-w-0 mr-2">
-          <h3 className="font-semibold text-lg truncate">{printer.name}</h3>
-          {printer.model && <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'} truncate`}>{printer.model}</p>}
+          <div className="flex items-center gap-2">
+            <span
+              className={`w-2 h-2 rounded-full shrink-0 ${
+                connectivity === 'online' ? 'bg-green-500' : connectivity === 'offline' ? 'bg-gray-400' : 'bg-yellow-500'
+              }`}
+              title={connectivity === 'online' ? 'Online' : connectivity === 'offline' ? 'Offline' : 'Checking...'}
+            />
+            <h3 className="font-semibold text-lg truncate">{printer.name}</h3>
+          </div>
+          {printer.model && <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'} truncate ml-4`}>{printer.model}</p>}
         </div>
         <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${style.light} ${style.text}`}>
           {style.label}
@@ -110,12 +140,24 @@ export default function PrinterCard({ printer, onEdit, onRefresh, onShowHistory 
         </button>
         <button
           onClick={handleTestPrint}
-          disabled={testPrinting}
-          className="flex-1 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/30 text-green-400 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+          disabled={testPrinting || connectivity === 'offline'}
+          className={`flex-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
+            connectivity === 'offline'
+              ? (isDark ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed')
+              : 'bg-green-600/20 hover:bg-green-600/30 text-green-400'
+          }`}
+          title={connectivity === 'offline' ? 'Printer is offline' : 'Send a test page to this printer'}
         >
-          {testPrinting ? 'Printing...' : 'Test Print'}
+          {testPrinting ? 'Printing...' : connectivity === 'offline' ? 'Offline' : 'Test Print'}
         </button>
       </div>
+
+      {/* Print feedback message */}
+      {printMsg && (
+        <p className={`text-xs mt-2 ${printMsg.ok ? 'text-green-400' : 'text-red-400'}`}>
+          {printMsg.text}
+        </p>
+      )}
 
       {/* Edit / History / Delete */}
       <div className="flex gap-2 mt-2">
