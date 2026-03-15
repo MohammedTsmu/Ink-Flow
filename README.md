@@ -11,23 +11,27 @@ Ink Flow is a smart Windows desktop app that helps prevent liquid ink printer no
 ## ✨ Features
 
 ### Core Printer Management
+
 - **Add, edit, and delete printers** with custom names, models, ink types, idle thresholds, and warning periods
 - **Auto-detect system printers** — scans Windows for installed printers via WMI and lets you add them instantly
 - **Online/offline status** — real-time printer connectivity checks with visual indicators
 - **Manual logging** — quickly record "Printed" or "Cleaned" actions per printer
 
 ### Smart Monitoring
+
 - **Idle countdown timer** — each printer card shows a progress bar counting down to the maintenance deadline
 - **Overdue severity levels** — Low Risk, Moderate Risk, High Risk, and Critical Risk based on how long a printer has been idle
 - **Automatic print job detection** — monitors the Windows Print Service event log (Event ID 307) every 5 minutes and auto-logs detected print jobs
 - **Print job deduplication** — won't double-count events within a ±2 minute window
 
 ### Automatic Maintenance
+
 - **Auto maintenance printing** — when enabled, automatically sends a test page to overdue/urgent printers using `notepad.exe /p` (antivirus-safe, no shell commands)
 - **Offline-aware** — skips auto-printing for offline printers and notifies you instead
 - **Configurable per-printer** — set custom max idle days and warning thresholds for each printer
 
 ### Notifications & Alerts
+
 - **Hourly status checks** — automatically scans all printers and triggers alerts for those needing attention
 - **Standalone alert popup** — always-on-top, frameless window that appears over all apps even when the main window is hidden
 - **In-app alert modal** — color-coded, severity-sorted alerts with dismiss confirmation
@@ -35,6 +39,7 @@ Ink Flow is a smart Windows desktop app that helps prevent liquid ink printer no
 - **Escalating severity** — alerts escalate from Warning → Urgent → Overdue → Severe → Critical based on idle duration
 
 ### Advanced History
+
 - **Full event timeline** — all maintenance events grouped by date with relative timestamps ("2h ago", "Yesterday")
 - **Multi-filter system** — filter by event type (prints/cleans), date range (today, 7d, 30d, 90d, all), specific printer, or search text
 - **Source detection** — each event is tagged as Manual, Auto-detected, Auto-maintenance, or Test print
@@ -43,17 +48,20 @@ Ink Flow is a smart Windows desktop app that helps prevent liquid ink printer no
 - **Export CSV** — copy filtered history to clipboard as CSV with one click
 
 ### Statistics Dashboard
+
 - **30-day activity chart** — stacked bar chart showing daily prints and cleans with hover tooltips
 - **Per-printer breakdown** — sorted by total activity with visual progress bars
 - **Summary cards** — total printers tracked and total events logged
 
 ### Settings & Preferences
+
 - **Start with Windows** — auto-launch minimized to system tray on login
 - **Auto maintenance print toggle** — enable/disable automatic test printing
 - **Dark / Light theme** — full theme support across all UI components
 - **Backup & Restore** — export and import all printer data as JSON files
 
 ### System Tray
+
 - **Minimize to tray** — closing the window hides to tray instead of quitting
 - **Tray context menu** — Show Ink Flow / Quit
 - **Double-click to show** — quickly access the app from the tray
@@ -63,19 +71,19 @@ Ink Flow is a smart Windows desktop app that helps prevent liquid ink printer no
 
 ## 🛠️ Tech Stack
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| **Electron** | 33.2.0 | Desktop framework, native OS integration |
-| **React** | 18.3 | UI components |
-| **TypeScript** | 5.7 | Type-safe code across main and renderer |
-| **Vite** | 6.0 | Fast renderer bundling |
-| **Tailwind CSS** | 3.4 | Utility-first styling with dark mode |
+| Technology       | Version | Purpose                                   |
+| ---------------- | ------- | ----------------------------------------- |
+| **Electron**     | 33.2.0  | Desktop framework, native OS integration  |
+| **React**        | 18.3    | UI components                             |
+| **TypeScript**   | 5.7     | Type-safe code across main and renderer   |
+| **Vite**         | 6.0     | Fast renderer bundling                    |
+| **Tailwind CSS** | 3.4     | Utility-first styling with dark mode      |
 
 ---
 
 ## 📁 Project Structure
 
-```
+```text
 Ink Flow/
 ├── package.json
 ├── tsconfig.json
@@ -149,12 +157,12 @@ npm run dev
 
 ### Available Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start dev server (Vite + Electron with hot reload) |
-| `npm run build` | Compile TypeScript + bundle renderer with Vite |
-| `npm start` | Launch the built app with Electron |
-| `npm run package` | Build + generate Windows NSIS installer |
+| Command          | Description                                         |
+| ---------------- | --------------------------------------------------- |
+| `npm run dev`    | Start dev server (Vite + Electron with hot reload)  |
+| `npm run build`  | Compile TypeScript + bundle renderer with Vite      |
+| `npm start`      | Launch the built app with Electron                  |
+| `npm run package`| Build + generate Windows NSIS installer             |
 
 ---
 
@@ -172,30 +180,39 @@ This generates an NSIS installer in the `release/` directory. The installer allo
 ## 🔧 How It Works
 
 ### Data Storage
+
 All printer and event data is stored in a single JSON file at:
-```
+
+```text
 %APPDATA%/ink-flow/inkflow-data.json
 ```
+
 - **Atomic writes** — uses temp file + rename to prevent corruption
 - **Auto-migration** — automatically adds missing fields when loading older data formats
 - **ID management** — recalculates ID counters on load to prevent collisions
 
 ### Print Job Detection
+
 The app queries the Windows Print Service Operational event log using PowerShell:
+
 ```powershell
 Get-WinEvent -LogName "Microsoft-Windows-PrintService/Operational"
   -FilterXPath "*[System[EventID=307]]" -MaxEvents 50
 ```
+
 This detects **Document Printed** events and matches them against your tracked printers by name.
 
 ### Safe Test Printing
+
 Instead of using shell commands (which trigger antivirus false positives), the app:
+
 1. Writes a text file to a temp directory using `fs.writeFileSync()`
 2. Launches `notepad.exe /p tempfile.txt` using Node.js `execFile()` (no shell)
 3. Cleans up the temp file after printing
 
 ### Notification Flow
-```
+
+```text
 Every 60 minutes:
   → Check all printer statuses
   → Build alert list (warning/urgent/overdue/severe/critical)
@@ -215,9 +232,9 @@ Ink Flow supports **Dark** and **Light** themes. Toggle from the top navigation 
 
 ## ⌨️ Keyboard Shortcuts
 
-| Key | Action |
-|-----|--------|
-| `Escape` | Close any open modal or panel |
+| Key      | Action                         |
+| -------- | ------------------------------ |
+| `Escape` | Close any open modal or panel  |
 
 ---
 
