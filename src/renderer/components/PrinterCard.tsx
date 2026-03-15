@@ -24,7 +24,18 @@ export default function PrinterCard({ printer, onEdit, onRefresh, onShowHistory 
   const [printMsg, setPrintMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [connectivity, setConnectivity] = useState<'online' | 'offline' | 'unknown'>('unknown');
   const style = statusStyles[printer.status];
-  const progress = Math.min(100, Math.max(0, (printer.daysRemaining / printer.maxIdleDays) * 100));
+  const progress = printer.status === 'overdue' ? 100 : Math.min(100, Math.max(0, (printer.daysRemaining / printer.maxIdleDays) * 100));
+  const daysOverdue = printer.status === 'overdue' ? Math.abs(Math.round(printer.daysRemaining * 10) / 10) : 0;
+
+  // Risk level based on how far overdue relative to max idle days
+  const getRiskLevel = () => {
+    if (printer.status !== 'overdue') return null;
+    if (daysOverdue >= printer.maxIdleDays * 2) return { label: 'Critical Risk', color: 'text-red-500', bg: 'bg-red-500/10', msg: 'Nozzles very likely clogged. Deep clean required.' };
+    if (daysOverdue >= printer.maxIdleDays) return { label: 'High Risk', color: 'text-red-400', bg: 'bg-red-500/10', msg: 'Nozzles may be clogged. Clean immediately.' };
+    if (daysOverdue >= 1) return { label: 'Moderate Risk', color: 'text-orange-400', bg: 'bg-orange-500/10', msg: 'Print or clean soon to prevent clogging.' };
+    return { label: 'Low Risk', color: 'text-yellow-400', bg: 'bg-yellow-500/10', msg: 'Just past due — act now.' };
+  };
+  const risk = getRiskLevel();
 
   useEffect(() => {
     let cancelled = false;
@@ -103,9 +114,11 @@ export default function PrinterCard({ printer, onEdit, onRefresh, onShowHistory 
       {/* Days remaining */}
       <div className="mb-4">
         <div className="flex justify-between text-sm mb-1">
-          <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>Days remaining</span>
+          <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>
+            {printer.status === 'overdue' ? 'Days overdue' : 'Days remaining'}
+          </span>
           <span className={`font-bold ${style.text}`}>
-            {printer.status === 'overdue' ? 'Overdue' : `${Math.round(printer.daysRemaining * 10) / 10}d`}
+            {printer.status === 'overdue' ? `${daysOverdue}d overdue` : `${Math.round(printer.daysRemaining * 10) / 10}d`}
           </span>
         </div>
         <div className={`w-full ${isDark ? 'bg-gray-800' : 'bg-gray-200'} rounded-full h-2`}>
@@ -121,6 +134,14 @@ export default function PrinterCard({ printer, onEdit, onRefresh, onShowHistory 
           )}
         </div>
       </div>
+
+      {/* Risk warning for overdue printers */}
+      {risk && (
+        <div className={`${risk.bg} border ${isDark ? 'border-red-900/50' : 'border-red-200'} rounded-lg p-2.5 mb-3`}>
+          <p className={`text-xs font-semibold ${risk.color}`}>{risk.label}</p>
+          <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-0.5`}>{risk.msg}</p>
+        </div>
+      )}
 
       {/* Maintenance actions */}
       <div className="flex gap-2">

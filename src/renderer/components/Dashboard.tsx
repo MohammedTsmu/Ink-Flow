@@ -23,10 +23,42 @@ export default function Dashboard({ printers, onAddPrinter, onEditPrinter, onRef
   const warning = printers.filter(p => p.status === 'warning').length;
   const good    = printers.filter(p => p.status === 'good').length;
 
+  // Find the most severely overdue printer for the alert banner
+  const severelyOverdue = printers
+    .filter(p => p.status === 'overdue' && Math.abs(p.daysRemaining) >= p.maxIdleDays)
+    .sort((a, b) => a.daysRemaining - b.daysRemaining);
+
   const btnClass = `flex items-center gap-2 px-3 py-2 ${isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'} rounded-lg transition-colors text-sm`;
 
   return (
     <div>
+      {/* Critical alert banner */}
+      {severelyOverdue.length > 0 && (
+        <div className={`${isDark ? 'bg-red-950 border-red-800' : 'bg-red-50 border-red-200'} border rounded-xl p-4 mb-6`}>
+          <div className="flex items-start gap-3">
+            <span className="text-2xl shrink-0">🚨</span>
+            <div>
+              <h3 className="font-bold text-red-400 text-sm">Critical: Printers Need Immediate Attention</h3>
+              <div className="mt-2 space-y-1">
+                {severelyOverdue.map(p => {
+                  const overdueDays = Math.abs(Math.round(p.daysRemaining * 10) / 10);
+                  return (
+                    <p key={p.id} className={`text-xs ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                      <span className="font-semibold">{p.name}</span> — {overdueDays} days overdue
+                      {overdueDays >= p.maxIdleDays * 2
+                        ? ' (nozzles very likely clogged, deep clean needed)'
+                        : ' (high risk of nozzle clogging)'}
+                    </p>
+                  );
+                })}
+              </div>
+              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-2`}>
+                Turn on the printer(s) and print or run a cleaning cycle immediately.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Summary bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div className="flex flex-wrap gap-2">

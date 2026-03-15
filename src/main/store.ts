@@ -167,7 +167,7 @@ class Store {
     else if (remaining <= warningDays) status = 'warning';
     else status = 'good';
 
-    return { daysRemaining: Math.max(0, remaining), status };
+    return { daysRemaining: remaining, status };
   }
 
   // ── Settings ───────────────────────────────────────────────

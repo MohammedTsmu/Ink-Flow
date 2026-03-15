@@ -25,11 +25,24 @@ function checkStatuses(): void {
 
     for (const printer of printers) {
       if (printer.status === 'overdue') {
-        notify(
-          `⚠ ${printer.name} — OVERDUE`,
-          'Maintenance overdue! Print or clean this printer immediately to prevent nozzle clogging.',
-          'critical',
-        );
+        const daysOverdue = Math.abs(Math.round(printer.daysRemaining * 10) / 10);
+        let body: string;
+        let title: string;
+
+        if (daysOverdue >= printer.maxIdleDays * 2) {
+          // Severely overdue — 2x the max idle time
+          title = `🚨 CRITICAL: ${printer.name}`;
+          body = `${daysOverdue} days overdue! Nozzles are very likely clogged. Turn on the printer and run a deep clean cycle immediately.`;
+        } else if (daysOverdue >= printer.maxIdleDays) {
+          // Very overdue — past the max again
+          title = `🚨 ${printer.name} — SEVERELY OVERDUE`;
+          body = `${daysOverdue} days overdue! High risk of permanent nozzle damage. Turn on and clean ASAP.`;
+        } else {
+          title = `⚠ ${printer.name} — OVERDUE`;
+          body = `${daysOverdue} day(s) overdue. Print or clean this printer soon to prevent clogging.`;
+        }
+
+        notify(title, body, 'critical');
       } else if (printer.status === 'urgent') {
         notify(
           `🔴 ${printer.name} — Urgent`,
