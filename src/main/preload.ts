@@ -28,6 +28,9 @@ contextBridge.exposeInMainWorld('api', {
   importBackup: () => ipcRenderer.invoke('import-backup'),
   // Diagnostics (Phase 1.4)
   getDiagnostics: (limit?: number) => ipcRenderer.invoke('get-diagnostics', limit),
+  // Auto-detection prereqs (Phase 1.5)
+  getDetectionStatus: () => ipcRenderer.invoke('get-detection-status'),
+  attemptFixDetection: () => ipcRenderer.invoke('attempt-fix-detection'),
   // Alert listener
   onPrinterAlerts: (callback: (alerts: Array<{ name: string; status: string; level: string; message: string }>) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, alerts: Array<{ name: string; status: string; level: string; message: string }>) => callback(alerts);

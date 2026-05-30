@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../ThemeContext';
-import { AppSettings } from '../types';
+import { AppSettings, DetectionStatus, DetectionFixResult } from '../types';
 import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface SettingsPanelProps {
@@ -16,6 +16,9 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [appVersion, setAppVersion] = useState('');
   const [loading, setLoading] = useState(true);
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
+  const [detection, setDetection] = useState<DetectionStatus | null>(null);
+  const [fixing, setFixing] = useState(false);
+  const [fixResult, setFixResult] = useState<DetectionFixResult | null>(null);
 
   useEffect(() => {
     loadSettings();
@@ -24,16 +27,34 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   const loadSettings = async () => {
     setLoading(true);
     try {
-      const [enabled, settings, version] = await Promise.all([
+      const [enabled, settings, version, detectionStatus] = await Promise.all([
         window.api.getAutoStart(),
         window.api.getSettings(),
         window.api.getAppVersion(),
+        window.api.getDetectionStatus(),
       ]);
       setAutoStart(enabled);
       setAutoMaintenancePrint(settings.autoMaintenancePrint);
       setAppVersion(version);
+      setDetection(detectionStatus);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEnableDetection = async () => {
+    setFixing(true);
+    setFixResult(null);
+    try {
+      const result = await window.api.attemptFixDetection();
+      setFixResult(result);
+      if (result.success) {
+        const refreshed = await window.api.getDetectionStatus();
+        setDetection(refreshed);
+      }
+    } finally {
+      setFixing(false);
+      setTimeout(() => setFixResult(null), 6000);
     }
   };
 
@@ -102,6 +123,33 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
                 <span className={toggleDotClass(autoMaintenancePrint)} />
               </button>
             </div>
+
+            {/* Auto-detection status */}
+            {detection && (
+              <div className={`p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg`}>
+                <p className="font-medium text-sm mb-2">Print Auto-Detection</p>
+                <div className="flex items-start gap-2 mb-2">
+                  <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${detection.available ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{detection.reason}</p>
+                </div>
+                {!detection.available && detection.fixable && (
+                  <>
+                    <button
+                      onClick={handleEnableDetection}
+                      disabled={fixing}
+                      className="w-full px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                    >
+                      {fixing ? 'Requesting permission…' : (detection.actionHint || 'Enable auto-detection')}
+                    </button>
+                    {fixResult && (
+                      <p className={`text-xs mt-2 ${fixResult.success ? 'text-green-400' : 'text-red-400'}`}>
+                        {fixResult.success ? 'Enabled! Auto-detection is now active.' : fixResult.reason}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Backup & Restore */}
             <div className={`p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg`}>

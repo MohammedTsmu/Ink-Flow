@@ -6,7 +6,8 @@ import { createTray } from './tray';
 import { startNotificationScheduler, stopNotificationScheduler } from './notifications';
 import { startPrintMonitor, stopPrintMonitor } from './print-monitor';
 import { setMainWindow } from './window-ref';
-import { initLogger, info, error } from '../core/log';
+import { initLogger, info, error, warn } from '../core/log';
+import { getAdapter } from '../core/printers';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -72,7 +73,7 @@ process.on('unhandledRejection', (reason) => {
   error('app', 'unhandledRejection', reason);
 });
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   initLogger(app.getPath('userData'));
   info('app', 'Starting Ink Flow', { version: app.getVersion(), platform: process.platform });
   initStore();
@@ -82,6 +83,19 @@ app.whenReady().then(() => {
   tray = createTray(mainWindow!);
   startNotificationScheduler();
   startPrintMonitor();
+
+  // Verify auto-detection prerequisites — surfaces the "log disabled"
+  // issue immediately instead of silently failing for weeks.
+  try {
+    const status = await getAdapter().checkDetectionStatus();
+    if (status.available) {
+      info('app', 'Auto-detection prereqs OK', status);
+    } else {
+      warn('app', 'Auto-detection prereqs failed', status);
+    }
+  } catch (err) {
+    error('app', 'Could not check detection status', err);
+  }
 });
 
 app.on('window-all-closed', () => {

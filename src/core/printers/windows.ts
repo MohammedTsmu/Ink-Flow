@@ -7,8 +7,10 @@ import {
   SystemPrinter,
   ConnectivityStatus,
   PrintEvent,
+  DetectionStatus,
+  DetectionFixResult,
 } from './types';
-import { error } from '../log';
+import { error, info, warn } from '../log';
 
 /**
  * Windows implementation of PrinterAdapter.
@@ -118,6 +120,97 @@ export class WindowsAdapter implements PrinterAdapter {
       clearTimeout(initialTimeout);
       clearInterval(interval);
     };
+  }
+
+  checkDetectionStatus(): Promise<DetectionStatus> {
+    return new Promise((resolve) => {
+      exec(
+        'wevtutil gl Microsoft-Windows-PrintService/Operational',
+        { timeout: 8000 },
+        (err, stdout) => {
+          if (err) {
+            warn('windows-adapter', 'wevtutil gl failed', err);
+            resolve({
+              available: false,
+              reason: 'Could not query the Windows event-log subsystem (wevtutil).',
+              fixable: false,
+            });
+            return;
+          }
+          const match = /enabled:\s*(true|false)/i.exec(stdout);
+          if (!match) {
+            resolve({
+              available: false,
+              reason: 'Unexpected wevtutil output — could not determine log state.',
+              fixable: false,
+            });
+            return;
+          }
+          const enabled = match[1].toLowerCase() === 'true';
+          if (enabled) {
+            resolve({
+              available: true,
+              reason: 'Windows PrintService Operational log is enabled. Auto-detection active.',
+              fixable: false,
+            });
+          } else {
+            resolve({
+              available: false,
+              reason: 'The Windows PrintService Operational log is disabled. Auto-detection of print jobs cannot work until it is enabled.',
+              fixable: true,
+              actionHint: 'Enable (requires administrator approval).',
+            });
+          }
+        },
+      );
+    });
+  }
+
+  attemptFixDetection(): Promise<DetectionFixResult> {
+    return new Promise((resolve) => {
+      // Try unprivileged first (works if Ink Flow itself runs as admin).
+      exec(
+        'wevtutil sl Microsoft-Windows-PrintService/Operational /e:true',
+        { timeout: 8000 },
+        (err) => {
+          if (!err) {
+            info('windows-adapter', 'Enabled PrintService Operational log (no elevation needed)');
+            resolve({ success: true });
+            return;
+          }
+          // Escalate via UAC. Start-Process -Verb RunAs triggers the prompt.
+          const elevatedCmd =
+            "Start-Process wevtutil -ArgumentList 'sl','Microsoft-Windows-PrintService/Operational','/e:true' -Verb RunAs -Wait";
+          execFile(
+            'powershell.exe',
+            ['-NoProfile', '-Command', elevatedCmd],
+            { timeout: 60000 },
+            (elevErr) => {
+              if (elevErr) {
+                warn('windows-adapter', 'Elevated wevtutil failed (likely UAC declined)', elevErr);
+                resolve({
+                  success: false,
+                  reason: 'Could not enable the print log. You may have declined the administrator prompt.',
+                });
+                return;
+              }
+              // Verify it actually flipped to enabled.
+              this.checkDetectionStatus().then(status => {
+                if (status.available) {
+                  info('windows-adapter', 'Enabled PrintService Operational log via UAC');
+                  resolve({ success: true });
+                } else {
+                  resolve({
+                    success: false,
+                    reason: 'Elevation succeeded but the log is still reporting as disabled.',
+                  });
+                }
+              });
+            },
+          );
+        },
+      );
+    });
   }
 
   private async pollEvents(callback: (event: PrintEvent) => void): Promise<void> {

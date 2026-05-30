@@ -24,6 +24,28 @@ export type ConnectivityStatus = 'online' | 'offline' | 'unknown';
 
 export type SupportedPlatform = 'win32' | 'darwin' | 'linux';
 
+/**
+ * Whether real-time auto-detection of print jobs is operational on
+ * this OS right now. On Windows this requires the
+ * Microsoft-Windows-PrintService/Operational log to be enabled. On
+ * macOS/Linux CUPS' page_log is always available.
+ */
+export interface DetectionStatus {
+  /** True if the app can currently observe print jobs automatically. */
+  available: boolean;
+  /** Human-readable explanation of the current state. */
+  reason: string;
+  /** True if the user (or app) can fix this without external tools. */
+  fixable: boolean;
+  /** Short hint shown next to the "Enable" button in the UI. */
+  actionHint?: string;
+}
+
+export interface DetectionFixResult {
+  success: boolean;
+  reason?: string;
+}
+
 export interface PrinterAdapter {
   readonly platform: SupportedPlatform;
 
@@ -46,4 +68,13 @@ export interface PrinterAdapter {
    * underlying resources (timers, watchers, subscriptions).
    */
   subscribeToPrintEvents(callback: (event: PrintEvent) => void): () => void;
+
+  /** Inspect whether auto-detection prerequisites are satisfied. */
+  checkDetectionStatus(): Promise<DetectionStatus>;
+
+  /**
+   * Attempt to fix the prerequisites flagged by checkDetectionStatus.
+   * On Windows, runs wevtutil to enable the print log (may trigger UAC).
+   */
+  attemptFixDetection(): Promise<DetectionFixResult>;
 }

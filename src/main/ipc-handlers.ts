@@ -6,6 +6,7 @@ import { detectSystemPrinters, checkPrinterStatus } from './printer-detect';
 import { isAutoStartEnabled, setAutoStart } from './autostart';
 import { sendTestPrint } from './auto-print';
 import { readRecentEntries } from '../core/log';
+import { getAdapter } from '../core/printers';
 
 export function setupIpcHandlers(): void {
   const store = getStore();
@@ -74,6 +75,10 @@ export function setupIpcHandlers(): void {
 
   // Diagnostics (Phase 1.4)
   ipcMain.handle('get-diagnostics', (_e, limit: number = 100) => readRecentEntries(limit));
+
+  // Auto-detection prereqs (Phase 1.5)
+  ipcMain.handle('get-detection-status', () => getAdapter().checkDetectionStatus());
+  ipcMain.handle('attempt-fix-detection', () => getAdapter().attemptFixDetection());
 
   // Phase 3: Backup import
   ipcMain.handle('import-backup', async () => {

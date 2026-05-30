@@ -78,6 +78,18 @@ export interface DiagnosticEntry {
   detail?: unknown;
 }
 
+export interface DetectionStatus {
+  available: boolean;
+  reason: string;
+  fixable: boolean;
+  actionHint?: string;
+}
+
+export interface DetectionFixResult {
+  success: boolean;
+  reason?: string;
+}
+
 declare global {
   interface Window {
     api: {
@@ -105,6 +117,9 @@ declare global {
       importBackup: () => Promise<boolean>;
       // Phase 1.4: Diagnostics
       getDiagnostics: (limit?: number) => Promise<DiagnosticEntry[]>;
+      // Phase 1.5: Auto-detection prereqs
+      getDetectionStatus: () => Promise<DetectionStatus>;
+      attemptFixDetection: () => Promise<DetectionFixResult>;
       // Alert listener
       onPrinterAlerts: (callback: (alerts: AlertItem[]) => void) => () => void;
     };
