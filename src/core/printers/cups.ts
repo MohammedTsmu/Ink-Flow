@@ -12,6 +12,7 @@ import {
   SupportedPlatform,
 } from './types';
 import { error, warn, info } from '../log';
+import { probeTcp, extractIpv4, RAW_PRINT_PORT } from '../net';
 
 /**
  * CUPS adapter — covers both macOS and Linux. CUPS is the standard
@@ -54,19 +55,39 @@ export class CupsAdapter implements PrinterAdapter {
     });
   }
 
-  getStatus(name: string): Promise<ConnectivityStatus> {
+  async getStatus(name: string): Promise<ConnectivityStatus> {
+    // For network printers, prefer a live TCP probe to the raw-print
+    // port over CUPS' own state, which can lag the device for minutes.
+    const deviceUri = await this.getDeviceUri(name);
+    const ip = deviceUri ? extractIpv4(deviceUri) : null;
+    if (ip) {
+      const portMatch = /:(\d+)(?:[/?]|$)/.exec(deviceUri!);
+      const port = portMatch ? Number(portMatch[1]) : RAW_PRINT_PORT;
+      return probeTcp(ip, port, 3000);
+    }
+    // USB or driverless — fall back to lpstat -p
+    return this.lpstatStatus(name);
+  }
+
+  private getDeviceUri(name: string): Promise<string | null> {
+    return new Promise((resolve) => {
+      execFile('lpstat', ['-v', name], { timeout: 8000 }, (err, stdout) => {
+        if (err || !stdout) { resolve(null); return; }
+        // Format: "device for NAME: socket://10.0.0.4:9100"
+        const m = /:\s*(\S+)\s*$/.exec(stdout.trim());
+        resolve(m ? m[1] : null);
+      });
+    });
+  }
+
+  private lpstatStatus(name: string): Promise<ConnectivityStatus> {
     return new Promise((resolve) => {
       execFile('lpstat', ['-p', name], { timeout: 8000 }, (err, stdout) => {
         if (err || !stdout) { resolve('unknown'); return; }
         const lower = stdout.toLowerCase();
-        if (/\bis\s+(idle|processing|printing)\b/.test(lower)) {
-          // Even "processing" counts as online — the printer is reachable.
-          resolve('online');
-        } else if (/\bis\s+(stopped|disabled|paused|offline)\b/.test(lower)) {
-          resolve('offline');
-        } else {
-          resolve('unknown');
-        }
+        if (/\bis\s+(idle|processing|printing)\b/.test(lower)) resolve('online');
+        else if (/\bis\s+(stopped|disabled|paused|offline)\b/.test(lower)) resolve('offline');
+        else resolve('unknown');
       });
     });
   }

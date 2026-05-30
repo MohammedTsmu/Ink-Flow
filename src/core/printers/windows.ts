@@ -11,6 +11,7 @@ import {
   DetectionFixResult,
 } from './types';
 import { error, info, warn } from '../log';
+import { probeTcp, extractIpv4, RAW_PRINT_PORT } from '../net';
 
 /**
  * Windows implementation of PrinterAdapter.
@@ -59,17 +60,45 @@ export class WindowsAdapter implements PrinterAdapter {
     });
   }
 
-  getStatus(name: string): Promise<ConnectivityStatus> {
+  async getStatus(name: string): Promise<ConnectivityStatus> {
+    // First, ask the spooler for the port. If it's a network port we
+    // can do a live TCP probe — far more reliable than the spooler's
+    // cached PrinterStatus, which is the root cause of "Ink Flow doesn't
+    // notice when my printer is off".
+    const portName = await this.getPortName(name);
+    const ip = portName ? extractIpv4(portName) : null;
+    if (ip) {
+      return probeTcp(ip, RAW_PRINT_PORT, 3000);
+    }
+    // USB / LPT / WSD-non-IP — fall back to the cached spooler status.
+    return this.cachedSpoolerStatus(name);
+  }
+
+  private getPortName(name: string): Promise<string | null> {
+    return new Promise((resolve) => {
+      const safeName = name.replace(/'/g, "''");
+      exec(
+        "powershell -NoProfile -Command \"(Get-Printer -Name '" + safeName + "' -ErrorAction SilentlyContinue).PortName\"",
+        { timeout: 8000 },
+        (err, stdout) => {
+          if (err) { resolve(null); return; }
+          const value = stdout.trim();
+          resolve(value || null);
+        },
+      );
+    });
+  }
+
+  private cachedSpoolerStatus(name: string): Promise<ConnectivityStatus> {
     return new Promise((resolve) => {
       const safeName = name.replace(/'/g, "''");
       exec(
         "powershell -NoProfile -Command \"Get-Printer -Name '" + safeName + "' | Select-Object PrinterStatus | ConvertTo-Json\"",
         { timeout: 8000 },
-        (error, stdout) => {
-          if (error || !stdout.trim()) { resolve('unknown'); return; }
+        (err, stdout) => {
+          if (err || !stdout.trim()) { resolve('unknown'); return; }
           try {
             const parsed = JSON.parse(stdout.trim());
-            // PrinterStatus: 0 = Normal, 1 = Paused, 3 = Offline, 5 = ...
             const status = Number(parsed.PrinterStatus ?? parsed.printerStatus ?? -1);
             if (status === 0) resolve('online');
             else if (status === 1 || status === 3 || status === 5) resolve('offline');
