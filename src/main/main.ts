@@ -6,6 +6,7 @@ import { createTray } from './tray';
 import { startNotificationScheduler, stopNotificationScheduler } from './notifications';
 import { startPrintMonitor, stopPrintMonitor } from './print-monitor';
 import { setMainWindow } from './window-ref';
+import { initLogger, info, error } from '../core/log';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -53,15 +54,27 @@ function createWindow(): void {
   });
 }
 
-app.setAppUserModelId('com.inkflow.app');
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.inkflow.app');
+}
 
 app.on('before-quit', () => {
   isQuitting = true;
   stopPrintMonitor();
   stopNotificationScheduler();
+  info('app', 'Shutting down');
+});
+
+process.on('uncaughtException', (err) => {
+  error('app', 'uncaughtException', err);
+});
+process.on('unhandledRejection', (reason) => {
+  error('app', 'unhandledRejection', reason);
 });
 
 app.whenReady().then(() => {
+  initLogger(app.getPath('userData'));
+  info('app', 'Starting Ink Flow', { version: app.getVersion(), platform: process.platform });
   initStore();
   setupIpcHandlers();
   createWindow();

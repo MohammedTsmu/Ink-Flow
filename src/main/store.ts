@@ -8,6 +8,7 @@ import {
   StoreData,
 } from '../core/types';
 import { calculateStatus } from '../core/status';
+import { error, warn } from '../core/log';
 
 export type { PrinterRecord, EventRecord, AppSettings } from '../core/types';
 
@@ -248,12 +249,16 @@ class Store {
   importData(json: string): boolean {
     try {
       const parsed = JSON.parse(json);
-      if (!Array.isArray(parsed.printers) || !Array.isArray(parsed.events)) return false;
+      if (!Array.isArray(parsed.printers) || !Array.isArray(parsed.events)) {
+        warn('store', 'importData rejected: top-level shape invalid');
+        return false;
+      }
       this.data = parsed;
       this.migrate();
       this.save();
       return true;
-    } catch {
+    } catch (err) {
+      error('store', 'importData failed', err);
       return false;
     }
   }

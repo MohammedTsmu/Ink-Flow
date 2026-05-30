@@ -1,6 +1,7 @@
 import { Notification } from 'electron';
 import { getAdapter } from '../core/printers';
 import { getStore } from './store';
+import { error, info, warn } from '../core/log';
 
 /** Send a single maintenance test page. Delegates to the platform adapter. */
 export function sendTestPrint(printerName: string): Promise<boolean> {
@@ -25,6 +26,7 @@ export async function runAutoMaintenancePrints(): Promise<void> {
 
       const connectivity = await adapter.getStatus(printer.name);
       if (connectivity === 'offline') {
+        warn('auto-print', 'Skipped: printer offline', { printer: printer.name });
         if (Notification.isSupported()) {
           new Notification({
             title: 'Ink Flow — Printer Offline',
@@ -41,15 +43,18 @@ export async function runAutoMaintenancePrints(): Promise<void> {
           eventType: 'print',
           notes: 'Auto maintenance print',
         });
+        info('auto-print', 'Sent maintenance print', { printer: printer.name });
         if (Notification.isSupported()) {
           new Notification({
             title: 'Ink Flow — Auto Print',
             body: `Sent maintenance print to "${printer.name}" to keep the nozzles healthy.`,
           }).show();
         }
+      } else {
+        error('auto-print', 'Maintenance print failed', { printer: printer.name });
       }
     }
-  } catch {
-    // Phase 1.4 replaces with structured diagnostics.
+  } catch (err) {
+    error('auto-print', 'runAutoMaintenancePrints crashed', err);
   }
 }

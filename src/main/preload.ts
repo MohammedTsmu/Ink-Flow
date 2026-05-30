@@ -26,6 +26,8 @@ contextBridge.exposeInMainWorld('api', {
   sendTestPrint: (printerName: string, printerId: number) => ipcRenderer.invoke('send-test-print', printerName, printerId),
   exportBackup: () => ipcRenderer.invoke('export-backup'),
   importBackup: () => ipcRenderer.invoke('import-backup'),
+  // Diagnostics (Phase 1.4)
+  getDiagnostics: (limit?: number) => ipcRenderer.invoke('get-diagnostics', limit),
   // Alert listener
   onPrinterAlerts: (callback: (alerts: Array<{ name: string; status: string; level: string; message: string }>) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, alerts: Array<{ name: string; status: string; level: string; message: string }>) => callback(alerts);

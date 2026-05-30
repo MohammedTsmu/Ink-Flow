@@ -8,6 +8,7 @@ import {
   ConnectivityStatus,
   PrintEvent,
 } from './types';
+import { error } from '../log';
 
 /**
  * Windows implementation of PrinterAdapter.
@@ -127,9 +128,8 @@ export class WindowsAdapter implements PrinterAdapter {
       const events = await queryWindowsPrintLog(sinceSeconds);
       this.lastEventCheckTime = now;
       for (const evt of events) callback(evt);
-    } catch {
-      // Silently absorb — log may be disabled, PowerShell may fail.
-      // Phase 1.4 replaces this with structured diagnostics.
+    } catch (err) {
+      error('windows-adapter', 'pollEvents failed', err);
     }
   }
 }

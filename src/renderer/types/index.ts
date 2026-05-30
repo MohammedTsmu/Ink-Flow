@@ -70,6 +70,14 @@ export interface AlertItem {
   message: string;
 }
 
+export interface DiagnosticEntry {
+  ts: string;
+  level: 'info' | 'warn' | 'error';
+  source: string;
+  message: string;
+  detail?: unknown;
+}
+
 declare global {
   interface Window {
     api: {
@@ -95,6 +103,8 @@ declare global {
       sendTestPrint: (printerName: string, printerId: number) => Promise<{ success: boolean; reason: string | null }>;
       exportBackup: () => Promise<boolean>;
       importBackup: () => Promise<boolean>;
+      // Phase 1.4: Diagnostics
+      getDiagnostics: (limit?: number) => Promise<DiagnosticEntry[]>;
       // Alert listener
       onPrinterAlerts: (callback: (alerts: AlertItem[]) => void) => () => void;
     };

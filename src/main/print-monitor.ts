@@ -1,6 +1,7 @@
 import { getAdapter } from '../core/printers';
 import { PrintEvent } from '../core/printers/types';
 import { getStore } from './store';
+import { error, info } from '../core/log';
 
 let unsubscribe: (() => void) | null = null;
 
@@ -29,11 +30,15 @@ function handlePrintEvent(evt: PrintEvent): void {
         eventType: 'print',
         notes: 'Auto-detected print job: ' + evt.documentName,
       });
+      info('print-monitor', 'Auto-logged print job', {
+        printer: matched.name,
+        document: evt.documentName,
+      });
     }
 
     store.setLastPrintCheckTime(new Date().toISOString());
-  } catch {
-    // Phase 1.4 replaces with structured diagnostics.
+  } catch (err) {
+    error('print-monitor', 'Failed to record print event', err);
   }
 }
 
@@ -41,6 +46,7 @@ export function startPrintMonitor(): void {
   if (unsubscribe) return;
   const adapter = getAdapter();
   unsubscribe = adapter.subscribeToPrintEvents(handlePrintEvent);
+  info('print-monitor', 'Print event subscription started');
 }
 
 export function stopPrintMonitor(): void {

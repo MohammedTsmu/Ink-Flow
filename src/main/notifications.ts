@@ -3,6 +3,7 @@ import { runAutoMaintenancePrints } from './auto-print';
 import { getMainWindow } from './main';
 import { showAlertPopup } from './alert-window';
 import { computeAlert } from '../core/severity';
+import { error } from '../core/log';
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
 let initialTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -66,9 +67,8 @@ function checkStatuses(): void {
     if (alerts.length > 0) {
       grabAttention();
     }
-  } catch {
-    // Silently ignore — store may not be ready yet. Will be replaced with
-    // a structured diagnostic logger in Phase 1.4.
+  } catch (err) {
+    error('notifications', 'checkStatuses failed', err);
   }
 
   // Run auto maintenance prints after checking statuses

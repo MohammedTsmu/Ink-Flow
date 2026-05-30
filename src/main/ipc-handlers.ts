@@ -5,6 +5,7 @@ import { getStore } from './store';
 import { detectSystemPrinters, checkPrinterStatus } from './printer-detect';
 import { isAutoStartEnabled, setAutoStart } from './autostart';
 import { sendTestPrint } from './auto-print';
+import { readRecentEntries } from '../core/log';
 
 export function setupIpcHandlers(): void {
   const store = getStore();
@@ -70,6 +71,9 @@ export function setupIpcHandlers(): void {
     fs.writeFileSync(savePath, store.exportData(), 'utf-8');
     return true;
   });
+
+  // Diagnostics (Phase 1.4)
+  ipcMain.handle('get-diagnostics', (_e, limit: number = 100) => readRecentEntries(limit));
 
   // Phase 3: Backup import
   ipcMain.handle('import-backup', async () => {
