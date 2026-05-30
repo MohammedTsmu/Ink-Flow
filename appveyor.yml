@@ -1,0 +1,84 @@
+# AppVeyor cross-platform release pipeline.
+#
+# Used when GitHub Actions is unavailable (e.g. account billing
+# locked). Free for public repos with no additional billing on
+# AppVeyor's side. Builds Win + macOS + Linux in parallel using
+# AppVeyor's three image variants.
+#
+# Setup (one-time, by repo owner):
+#   1. Sign up at https://ci.appveyor.com with your GitHub account.
+#   2. New Project → pick MohammedTsmu/Ink-Flow.
+#   3. Under Settings → Environment → Add encrypted variable
+#      GH_RELEASE_TOKEN = <GitHub PAT with `repo` scope> (encrypt via
+#      https://ci.appveyor.com/tools/encrypt).
+#      Or skip the deploy block and download artifacts from AppVeyor
+#      directly.
+#
+# Tag pushes (v*.*.*) trigger automatic GitHub release attach.
+# Any push to main triggers a build but skips deploy.
+
+version: 3.0.{build}
+
+# One job per OS; AppVeyor runs them in parallel.
+image:
+  - Visual Studio 2022          # Windows
+  - macos-sonoma                # macOS
+  - Ubuntu2204                  # Linux
+
+# Don't waste CI time on docs-only changes.
+skip_commits:
+  files:
+    - 'README.md'
+    - '.gitignore'
+    - 'LICENSE'
+
+# Skip the redundant build that fires for both PR-source-branch and PR.
+skip_branch_with_pr: true
+
+stack: node 20
+
+# Cache npm + electron downloads so re-runs are fast.
+cache:
+  - node_modules -> package-lock.json
+  - '%LOCALAPPDATA%\electron\Cache -> package-lock.json'
+  - '%LOCALAPPDATA%\electron-builder\Cache -> package-lock.json'
+  - $HOME/.cache/electron -> package-lock.json
+  - $HOME/.cache/electron-builder -> package-lock.json
+
+install:
+  - npm ci
+
+build_script:
+  - npm test
+  - npm run package
+
+# Pick up every flavor electron-builder emits per host OS.
+artifacts:
+  - path: release/*.exe
+    name: windows-installer
+  - path: release/*.dmg
+    name: macos-dmg
+  - path: release/*.zip
+    name: macos-zip
+  - path: release/*.AppImage
+    name: linux-appimage
+  - path: release/*.deb
+    name: linux-deb
+  - path: release/latest*.yml
+    name: update-manifest
+
+# Attach to the GitHub Release matching the tag.
+# Add GH_RELEASE_TOKEN as an encrypted env var via the AppVeyor UI
+# (https://ci.appveyor.com/tools/encrypt) and uncomment this block.
+#
+# deploy:
+#   - provider: GitHub
+#     release: $(APPVEYOR_REPO_TAG_NAME)
+#     auth_token:
+#       secure: <PASTE_ENCRYPTED_VALUE_HERE>
+#     artifact: /.*\.(exe|dmg|zip|AppImage|deb)/
+#     draft: false
+#     prerelease: false
+#     force_update: true
+#     on:
+#       APPVEYOR_REPO_TAG: true
