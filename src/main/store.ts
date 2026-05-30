@@ -1,39 +1,15 @@
 import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
+import {
+  PrinterRecord,
+  EventRecord,
+  AppSettings,
+  StoreData,
+} from '../core/types';
+import { calculateStatus } from '../core/status';
 
-export interface PrinterRecord {
-  id: number;
-  name: string;
-  model: string;
-  inkType: string;
-  maxIdleDays: number;
-  warningDays: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface EventRecord {
-  id: number;
-  printerId: number;
-  eventType: 'print' | 'clean';
-  eventDate: string;
-  notes: string;
-}
-
-export interface AppSettings {
-  autoMaintenancePrint: boolean;
-  theme: 'dark' | 'light';
-}
-
-interface StoreData {
-  printers: PrinterRecord[];
-  events: EventRecord[];
-  nextPrinterId: number;
-  nextEventId: number;
-  settings: AppSettings;
-  lastPrintCheckTime: string;
-}
+export type { PrinterRecord, EventRecord, AppSettings } from '../core/types';
 
 class Store {
   private data!: StoreData;
@@ -180,27 +156,9 @@ class Store {
   getPrintersWithStatus() {
     return this.getPrinters().map(printer => {
       const lastEvent = this.getLastEvent(printer.id);
-      const { daysRemaining, status } = this.calculateStatus(lastEvent, printer.maxIdleDays, printer.warningDays);
+      const { daysRemaining, status } = calculateStatus(lastEvent, printer.maxIdleDays, printer.warningDays);
       return { ...printer, lastEvent, daysRemaining, status };
     });
-  }
-
-  private calculateStatus(lastEvent: EventRecord | null, maxIdleDays: number, warningDays: number) {
-    if (!lastEvent) {
-      return { daysRemaining: 0, status: 'overdue' as const };
-    }
-
-    const diffMs = Date.now() - new Date(lastEvent.eventDate).getTime();
-    const diffDays = diffMs / (1000 * 60 * 60 * 24);
-    const remaining = Math.round((maxIdleDays - diffDays) * 10) / 10;
-
-    let status: 'good' | 'warning' | 'urgent' | 'overdue';
-    if (remaining <= 0) status = 'overdue';
-    else if (remaining <= 1) status = 'urgent';
-    else if (remaining <= warningDays) status = 'warning';
-    else status = 'good';
-
-    return { daysRemaining: remaining, status };
   }
 
   // ── Settings ───────────────────────────────────────────────

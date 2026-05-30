@@ -2,6 +2,7 @@ import { getStore } from './store';
 import { runAutoMaintenancePrints } from './auto-print';
 import { getMainWindow } from './main';
 import { showAlertPopup } from './alert-window';
+import { computeAlert } from '../core/severity';
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
 let initialTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -34,43 +35,16 @@ function checkStatuses(): void {
     const store = getStore();
     const printers = store.getPrintersWithStatus();
 
-    let needsAttention = false;
     const alerts: Array<{ name: string; status: string; level: string; message: string }> = [];
 
     for (const printer of printers) {
-      if (printer.status === 'overdue') {
-        needsAttention = true;
-        const daysOverdue = Math.abs(Math.round(printer.daysRemaining * 10) / 10);
-        let level: string;
-        let message: string;
-
-        if (daysOverdue >= printer.maxIdleDays * 2) {
-          level = 'critical';
-          message = `${daysOverdue} days overdue! Nozzles are very likely clogged. Turn on the printer and run a deep clean cycle immediately.`;
-        } else if (daysOverdue >= printer.maxIdleDays) {
-          level = 'severe';
-          message = `${daysOverdue} days overdue! High risk of permanent nozzle damage. Turn on and clean ASAP.`;
-        } else {
-          level = 'overdue';
-          message = `${daysOverdue} day(s) overdue. Print or clean this printer soon to prevent clogging.`;
-        }
-
-        alerts.push({ name: printer.name, status: printer.status, level, message });
-      } else if (printer.status === 'urgent') {
-        needsAttention = true;
+      const alert = computeAlert(printer.status, printer.daysRemaining, printer.maxIdleDays);
+      if (alert) {
         alerts.push({
           name: printer.name,
           status: printer.status,
-          level: 'urgent',
-          message: 'Less than 1 day remaining before maintenance is needed!',
-        });
-      } else if (printer.status === 'warning') {
-        needsAttention = true;
-        alerts.push({
-          name: printer.name,
-          status: printer.status,
-          level: 'warning',
-          message: `${Math.round(printer.daysRemaining)} day(s) remaining before maintenance is needed.`,
+          level: alert.level,
+          message: alert.message,
         });
       }
     }
@@ -89,11 +63,12 @@ function checkStatuses(): void {
     }
 
     // Flash taskbar and bring window forward so user notices
-    if (needsAttention) {
+    if (alerts.length > 0) {
       grabAttention();
     }
   } catch {
-    // Silently ignore — store may not be ready yet
+    // Silently ignore — store may not be ready yet. Will be replaced with
+    // a structured diagnostic logger in Phase 1.4.
   }
 
   // Run auto maintenance prints after checking statuses
