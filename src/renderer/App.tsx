@@ -7,6 +7,7 @@ import DetectPrintersModal from './components/DetectPrintersModal';
 import HistoryPanel from './components/HistoryPanel';
 import SettingsPanel from './components/SettingsPanel';
 import StatisticsPanel from './components/StatisticsPanel';
+import DiagnosticsPanel from './components/DiagnosticsPanel';
 import AlertModal from './components/AlertModal';
 import { PrinterWithStatus, AlertItem } from './types';
 
@@ -19,6 +20,7 @@ export default function App() {
   const [historyPrinterId, setHistoryPrinterId] = useState<number | undefined>(undefined);
   const [showSettings, setShowSettings] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
 
   const loadPrinters = async () => {
@@ -62,6 +64,7 @@ export default function App() {
         onShowHistory={handleShowHistory}
         onShowSettings={() => setShowSettings(true)}
         onShowStats={() => setShowStats(true)}
+        onShowDiagnostics={() => setShowDiagnostics(true)}
         onShowPrinterHistory={handleShowPrinterHistory}
       />
       {showAddModal && (
@@ -97,6 +100,11 @@ export default function App() {
       {showStats && (
         <StatisticsPanel
           onClose={() => setShowStats(false)}
+        />
+      )}
+      {showDiagnostics && (
+        <DiagnosticsPanel
+          onClose={() => setShowDiagnostics(false)}
         />
       )}
       {alerts.length > 0 && (
