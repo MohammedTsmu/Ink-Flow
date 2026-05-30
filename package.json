@@ -45,6 +45,9 @@
       "dist/**/*",
       "assets/**/*"
     ],
+    "asarUnpack": [
+      "dist/tick/**/*"
+    ],
     "win": {
       "target": "nsis",
       "icon": "assets/icon.png"

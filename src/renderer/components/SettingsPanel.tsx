@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../ThemeContext';
-import { AppSettings, DetectionStatus, DetectionFixResult } from '../types';
+import { AppSettings, DetectionStatus, DetectionFixResult, ScheduleStatus, ScheduleResult } from '../types';
 import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface SettingsPanelProps {
@@ -19,6 +19,9 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [detection, setDetection] = useState<DetectionStatus | null>(null);
   const [fixing, setFixing] = useState(false);
   const [fixResult, setFixResult] = useState<DetectionFixResult | null>(null);
+  const [schedule, setSchedule] = useState<ScheduleStatus | null>(null);
+  const [schedulePending, setSchedulePending] = useState(false);
+  const [scheduleResult, setScheduleResult] = useState<ScheduleResult | null>(null);
 
   useEffect(() => {
     loadSettings();
@@ -27,16 +30,18 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   const loadSettings = async () => {
     setLoading(true);
     try {
-      const [enabled, settings, version, detectionStatus] = await Promise.all([
+      const [enabled, settings, version, detectionStatus, scheduleStatus] = await Promise.all([
         window.api.getAutoStart(),
         window.api.getSettings(),
         window.api.getAppVersion(),
         window.api.getDetectionStatus(),
+        window.api.getScheduleStatus(),
       ]);
       setAutoStart(enabled);
       setAutoMaintenancePrint(settings.autoMaintenancePrint);
       setAppVersion(version);
       setDetection(detectionStatus);
+      setSchedule(scheduleStatus);
     } finally {
       setLoading(false);
     }
@@ -55,6 +60,23 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
     } finally {
       setFixing(false);
       setTimeout(() => setFixResult(null), 6000);
+    }
+  };
+
+  const handleScheduleToggle = async () => {
+    setSchedulePending(true);
+    setScheduleResult(null);
+    try {
+      const wantOn = !schedule?.installed;
+      const result = wantOn
+        ? await window.api.installSchedule()
+        : await window.api.uninstallSchedule();
+      setScheduleResult(result);
+      const refreshed = await window.api.getScheduleStatus();
+      setSchedule(refreshed);
+    } finally {
+      setSchedulePending(false);
+      setTimeout(() => setScheduleResult(null), 6000);
     }
   };
 
@@ -122,6 +144,38 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
               <button onClick={handleAutoMaintenancePrintToggle} className={toggleBtnClass(autoMaintenancePrint)}>
                 <span className={toggleDotClass(autoMaintenancePrint)} />
               </button>
+            </div>
+
+            {/* Background maintenance (Phase 2.3) */}
+            <div className={`p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium text-sm">Background Maintenance</p>
+                  <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-0.5`}>
+                    Check overdue printers every 6 hours even when the app is closed.
+                  </p>
+                </div>
+                <button
+                  onClick={handleScheduleToggle}
+                  disabled={schedulePending}
+                  className={toggleBtnClass(!!schedule?.installed)}
+                  title={schedule?.installed ? 'Click to disable' : 'Click to enable'}
+                >
+                  <span className={toggleDotClass(!!schedule?.installed)} />
+                </button>
+              </div>
+              {schedule?.detail && (
+                <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-2`}>
+                  {schedule.detail}
+                </p>
+              )}
+              {scheduleResult && (
+                <p className={`text-xs mt-2 ${scheduleResult.success ? 'text-green-400' : 'text-red-400'}`}>
+                  {scheduleResult.success
+                    ? (schedule?.installed ? 'Background tick installed.' : 'Background tick removed.')
+                    : scheduleResult.reason}
+                </p>
+              )}
             </div>
 
             {/* Auto-detection status */}

@@ -90,6 +90,17 @@ export interface DetectionFixResult {
   reason?: string;
 }
 
+export interface ScheduleResult {
+  success: boolean;
+  reason?: string;
+}
+
+export interface ScheduleStatus {
+  installed: boolean;
+  detail?: string;
+  lastRunAt?: string;
+}
+
 declare global {
   interface Window {
     api: {
@@ -120,6 +131,10 @@ declare global {
       // Phase 1.5: Auto-detection prereqs
       getDetectionStatus: () => Promise<DetectionStatus>;
       attemptFixDetection: () => Promise<DetectionFixResult>;
+      // Phase 2.3: Background maintenance schedule
+      getScheduleStatus: () => Promise<ScheduleStatus>;
+      installSchedule: () => Promise<ScheduleResult>;
+      uninstallSchedule: () => Promise<ScheduleResult>;
       // Alert listener
       onPrinterAlerts: (callback: (alerts: AlertItem[]) => void) => () => void;
     };

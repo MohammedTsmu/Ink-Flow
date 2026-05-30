@@ -7,6 +7,7 @@ import { isAutoStartEnabled, setAutoStart } from './autostart';
 import { sendTestPrint } from './auto-print';
 import { readRecentEntries } from '../core/log';
 import { getAdapter } from '../core/printers';
+import { getScheduleStatus, installSchedule, uninstallSchedule } from './schedule';
 
 export function setupIpcHandlers(): void {
   const store = getStore();
@@ -79,6 +80,11 @@ export function setupIpcHandlers(): void {
   // Auto-detection prereqs (Phase 1.5)
   ipcMain.handle('get-detection-status', () => getAdapter().checkDetectionStatus());
   ipcMain.handle('attempt-fix-detection', () => getAdapter().attemptFixDetection());
+
+  // Background maintenance schedule (Phase 2.3)
+  ipcMain.handle('get-schedule-status', () => getScheduleStatus());
+  ipcMain.handle('install-schedule', () => installSchedule());
+  ipcMain.handle('uninstall-schedule', () => uninstallSchedule());
 
   // Phase 3: Backup import
   ipcMain.handle('import-backup', async () => {

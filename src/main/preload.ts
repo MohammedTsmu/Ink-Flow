@@ -31,6 +31,10 @@ contextBridge.exposeInMainWorld('api', {
   // Auto-detection prereqs (Phase 1.5)
   getDetectionStatus: () => ipcRenderer.invoke('get-detection-status'),
   attemptFixDetection: () => ipcRenderer.invoke('attempt-fix-detection'),
+  // Background maintenance schedule (Phase 2.3)
+  getScheduleStatus: () => ipcRenderer.invoke('get-schedule-status'),
+  installSchedule: () => ipcRenderer.invoke('install-schedule'),
+  uninstallSchedule: () => ipcRenderer.invoke('uninstall-schedule'),
   // Alert listener
   onPrinterAlerts: (callback: (alerts: Array<{ name: string; status: string; level: string; message: string }>) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, alerts: Array<{ name: string; status: string; level: string; message: string }>) => callback(alerts);
