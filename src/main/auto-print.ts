@@ -2,6 +2,7 @@ import { Notification } from 'electron';
 import { getAdapter } from '../core/printers';
 import { getStore } from './store';
 import { error, info, warn } from '../core/log';
+import { isWithinMaintenanceWindow } from '../core/maintenance-window';
 
 /** Send a single maintenance test page. Delegates to the platform adapter. */
 export function sendTestPrint(printerName: string): Promise<boolean> {
@@ -18,11 +19,19 @@ export async function runAutoMaintenancePrints(): Promise<void> {
     const store = getStore();
     const printers = store.getPrintersWithStatus();
 
+    const settings = store.getSettings();
+    if (!settings.autoMaintenancePrint) return;
+    if (!isWithinMaintenanceWindow(settings.maintenanceWindow)) {
+      info('auto-print', 'Outside maintenance window — skipping run', settings.maintenanceWindow);
+      return;
+    }
+
     for (const printer of printers) {
       if (printer.status !== 'urgent' && printer.status !== 'overdue') continue;
-
-      const settings = store.getSettings();
-      if (!settings.autoMaintenancePrint) continue;
+      if (printer.autoMaintain === false) {
+        info('auto-print', 'Skipped: per-printer auto-maintain disabled', { printer: printer.name });
+        continue;
+      }
 
       const connectivity = await adapter.getStatus(printer.name);
       if (connectivity === 'offline') {

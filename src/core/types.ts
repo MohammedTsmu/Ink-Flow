@@ -17,6 +17,12 @@ export interface PrinterRecord {
   warningDays: number;
   createdAt: string;
   updatedAt: string;
+  /**
+   * When false, the headless tick and auto-print never target this
+   * printer even if it is overdue. Default: true. Useful for expensive
+   * printers (large-format, photo) that the user wants to run manually.
+   */
+  autoMaintain: boolean;
 }
 
 export interface EventRecord {
@@ -27,9 +33,22 @@ export interface EventRecord {
   notes: string;
 }
 
+export interface MaintenanceWindow {
+  /** Local hour at which auto-maintenance becomes eligible (0-23). */
+  startHour: number;
+  /**
+   * Local hour at which auto-maintenance stops (0-24). Use { 0, 24 }
+   * to mean "always allowed". A window where startHour > endHour
+   * wraps over midnight (e.g. { 22, 6 } = 10 PM through 6 AM).
+   */
+  endHour: number;
+}
+
 export interface AppSettings {
   autoMaintenancePrint: boolean;
   theme: 'dark' | 'light';
+  /** Time-of-day window during which auto-prints may fire. */
+  maintenanceWindow: MaintenanceWindow;
 }
 
 export interface PrinterWithStatus extends PrinterRecord {

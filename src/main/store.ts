@@ -59,13 +59,24 @@ class Store {
   /** Ensure all fields exist for data created by older versions. */
   private migrate(): void {
     if (!this.data.settings) {
-      this.data.settings = { autoMaintenancePrint: false, theme: 'dark' };
+      this.data.settings = {
+        autoMaintenancePrint: false,
+        theme: 'dark',
+        maintenanceWindow: { startHour: 0, endHour: 24 },
+      };
+    }
+    if (!this.data.settings.maintenanceWindow) {
+      this.data.settings.maintenanceWindow = { startHour: 0, endHour: 24 };
     }
     if (!this.data.lastPrintCheckTime) {
       this.data.lastPrintCheckTime = new Date().toISOString();
     }
     if (!Array.isArray(this.data.printers)) this.data.printers = [];
     if (!Array.isArray(this.data.events)) this.data.events = [];
+    // Backfill autoMaintain — pre-v3 records didn't have it; default true.
+    for (const p of this.data.printers) {
+      if (typeof p.autoMaintain !== 'boolean') p.autoMaintain = true;
+    }
     // Recalculate ID counters to prevent duplicates
     const maxPrinterId = this.data.printers.reduce((m, p) => Math.max(m, p.id), 0);
     const maxEventId = this.data.events.reduce((m, e) => Math.max(m, e.id), 0);
@@ -89,7 +100,7 @@ class Store {
     return [...this.data.printers].sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  addPrinter(input: { name: string; model: string; inkType: string; maxIdleDays: number; warningDays: number }): PrinterRecord {
+  addPrinter(input: { name: string; model: string; inkType: string; maxIdleDays: number; warningDays: number; autoMaintain?: boolean }): PrinterRecord {
     const now = new Date().toISOString();
     const printer: PrinterRecord = {
       id: this.data.nextPrinterId++,
@@ -98,6 +109,7 @@ class Store {
       inkType: input.inkType,
       maxIdleDays: input.maxIdleDays,
       warningDays: input.warningDays,
+      autoMaintain: input.autoMaintain ?? true,
       createdAt: now,
       updatedAt: now,
     };
@@ -108,7 +120,7 @@ class Store {
     return printer;
   }
 
-  updatePrinter(id: number, input: Partial<{ name: string; model: string; inkType: string; maxIdleDays: number; warningDays: number }>): PrinterRecord | null {
+  updatePrinter(id: number, input: Partial<{ name: string; model: string; inkType: string; maxIdleDays: number; warningDays: number; autoMaintain: boolean }>): PrinterRecord | null {
     const printer = this.data.printers.find(p => p.id === id);
     if (!printer) return null;
 
@@ -117,6 +129,7 @@ class Store {
     if (input.inkType !== undefined) printer.inkType = input.inkType;
     if (input.maxIdleDays !== undefined) printer.maxIdleDays = input.maxIdleDays;
     if (input.warningDays !== undefined) printer.warningDays = input.warningDays;
+    if (input.autoMaintain !== undefined) printer.autoMaintain = input.autoMaintain;
     printer.updatedAt = new Date().toISOString();
 
     this.save();
@@ -184,14 +197,22 @@ class Store {
 
   getSettings(): AppSettings {
     if (!this.data.settings) {
-      this.data.settings = { autoMaintenancePrint: false, theme: 'dark' };
+      this.data.settings = {
+        autoMaintenancePrint: false,
+        theme: 'dark',
+        maintenanceWindow: { startHour: 0, endHour: 24 },
+      };
     }
     return { ...this.data.settings };
   }
 
   updateSettings(partial: Partial<AppSettings>): AppSettings {
     if (!this.data.settings) {
-      this.data.settings = { autoMaintenancePrint: false, theme: 'dark' };
+      this.data.settings = {
+        autoMaintenancePrint: false,
+        theme: 'dark',
+        maintenanceWindow: { startHour: 0, endHour: 24 },
+      };
     }
     Object.assign(this.data.settings, partial);
     this.save();

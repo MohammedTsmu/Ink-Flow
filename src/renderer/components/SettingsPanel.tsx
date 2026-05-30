@@ -22,6 +22,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [schedule, setSchedule] = useState<ScheduleStatus | null>(null);
   const [schedulePending, setSchedulePending] = useState(false);
   const [scheduleResult, setScheduleResult] = useState<ScheduleResult | null>(null);
+  const [maintenanceWindow, setMaintenanceWindow] = useState<{ startHour: number; endHour: number } | null>(null);
 
   useEffect(() => {
     loadSettings();
@@ -39,6 +40,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
       ]);
       setAutoStart(enabled);
       setAutoMaintenancePrint(settings.autoMaintenancePrint);
+      setMaintenanceWindow(settings.maintenanceWindow ?? { startHour: 0, endHour: 24 });
       setAppVersion(version);
       setDetection(detectionStatus);
       setSchedule(scheduleStatus);
@@ -92,6 +94,11 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
     await window.api.updateSettings({ autoMaintenancePrint: next });
   };
 
+  const handleWindowChange = async (next: { startHour: number; endHour: number }) => {
+    setMaintenanceWindow(next);
+    await window.api.updateSettings({ maintenanceWindow: next });
+  };
+
   const handleExport = async () => {
     setBackupStatus(null);
     const success = await window.api.exportBackup();
@@ -136,14 +143,39 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
             </div>
 
             {/* Auto maintenance print */}
-            <div className={`flex items-center justify-between p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg`}>
-              <div>
-                <p className="font-medium text-sm">Auto Maintenance Print</p>
-                <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-0.5`}>Automatically send a test page when printers are overdue</p>
+            <div className={`p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg`}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium text-sm">Auto Maintenance Print</p>
+                  <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-0.5`}>Automatically send a test page when printers are overdue</p>
+                </div>
+                <button onClick={handleAutoMaintenancePrintToggle} className={toggleBtnClass(autoMaintenancePrint)}>
+                  <span className={toggleDotClass(autoMaintenancePrint)} />
+                </button>
               </div>
-              <button onClick={handleAutoMaintenancePrintToggle} className={toggleBtnClass(autoMaintenancePrint)}>
-                <span className={toggleDotClass(autoMaintenancePrint)} />
-              </button>
+              {autoMaintenancePrint && maintenanceWindow && (
+                <div className="mt-3 flex items-center gap-2">
+                  <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Only between</span>
+                  <select
+                    value={maintenanceWindow.startHour}
+                    onChange={(e) => handleWindowChange({ ...maintenanceWindow, startHour: parseInt(e.target.value) })}
+                    className={`px-2 py-1 ${isDark ? 'bg-gray-700 text-gray-200' : 'bg-white text-gray-800'} border ${isDark ? 'border-gray-600' : 'border-gray-300'} rounded text-xs`}
+                  >
+                    {Array.from({ length: 24 }, (_, h) => h).map(h => <option key={h} value={h}>{h.toString().padStart(2, '0')}:00</option>)}
+                  </select>
+                  <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>and</span>
+                  <select
+                    value={maintenanceWindow.endHour}
+                    onChange={(e) => handleWindowChange({ ...maintenanceWindow, endHour: parseInt(e.target.value) })}
+                    className={`px-2 py-1 ${isDark ? 'bg-gray-700 text-gray-200' : 'bg-white text-gray-800'} border ${isDark ? 'border-gray-600' : 'border-gray-300'} rounded text-xs`}
+                  >
+                    {Array.from({ length: 25 }, (_, h) => h).map(h => <option key={h} value={h}>{h === 24 ? '24:00' : h.toString().padStart(2, '0') + ':00'}</option>)}
+                  </select>
+                  <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                    {maintenanceWindow.startHour === 0 && maintenanceWindow.endHour === 24 ? '(any time)' : 'local time'}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Background maintenance (Phase 2.3) */}

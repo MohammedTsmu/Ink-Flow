@@ -4,12 +4,14 @@ export interface PrinterData {
   inkType: string;
   maxIdleDays: number;
   warningDays: number;
+  autoMaintain?: boolean;
 }
 
 export interface Printer extends PrinterData {
   id: number;
   createdAt: string;
   updatedAt: string;
+  autoMaintain: boolean;
 }
 
 export interface MaintenanceEvent {
@@ -37,9 +39,15 @@ export interface MaintenanceEventWithPrinter extends MaintenanceEvent {
   printerName: string;
 }
 
+export interface MaintenanceWindow {
+  startHour: number;
+  endHour: number;
+}
+
 export interface AppSettings {
   autoMaintenancePrint: boolean;
   theme: 'dark' | 'light';
+  maintenanceWindow: MaintenanceWindow;
 }
 
 export interface PrinterStats {

@@ -18,6 +18,7 @@ export default function EditPrinterModal({ printer, onClose, onSave }: EditPrint
   const [inkType, setInkType] = useState(printer.inkType);
   const [maxIdleDays, setMaxIdleDays] = useState(printer.maxIdleDays);
   const [warningDays, setWarningDays] = useState(printer.warningDays);
+  const [autoMaintain, setAutoMaintain] = useState(printer.autoMaintain !== false);
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,6 +33,7 @@ export default function EditPrinterModal({ printer, onClose, onSave }: EditPrint
         inkType: inkType.trim(),
         maxIdleDays,
         warningDays: Math.min(warningDays, maxIdleDays),
+        autoMaintain,
       });
       onSave();
       onClose();
@@ -103,6 +105,20 @@ export default function EditPrinterModal({ printer, onClose, onSave }: EditPrint
                 min="1"
               />
             </div>
+          </div>
+
+          <div className={`flex items-center justify-between p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg`}>
+            <div>
+              <p className="font-medium text-sm">Include in auto-maintenance</p>
+              <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-0.5`}>Background tick and auto-print may target this printer.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAutoMaintain(!autoMaintain)}
+              className={`relative w-11 h-6 rounded-full transition-colors ${autoMaintain ? 'bg-blue-600' : isDark ? 'bg-gray-600' : 'bg-gray-300'}`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${autoMaintain ? 'translate-x-5' : 'translate-x-0'}`} />
+            </button>
           </div>
 
           <div className="flex justify-end gap-3 pt-2">

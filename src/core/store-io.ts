@@ -76,7 +76,11 @@ export function emptyStore(): StoreData {
     events: [],
     nextPrinterId: 1,
     nextEventId: 1,
-    settings: { autoMaintenancePrint: false, theme: 'dark' },
+    settings: {
+      autoMaintenancePrint: false,
+      theme: 'dark',
+      maintenanceWindow: { startHour: 0, endHour: 24 },
+    },
     lastPrintCheckTime: new Date().toISOString(),
   };
 }

@@ -27,6 +27,7 @@ import { calculateStatus } from '../core/status';
 import { getAdapter } from '../core/printers';
 import { StoreData, EventRecord } from '../core/types';
 import { readStoreFile, writeStoreFileAtomic, withStoreLock } from '../core/store-io';
+import { isWithinMaintenanceWindow } from '../core/maintenance-window';
 
 async function run(): Promise<void> {
   const userDataPath = resolveUserDataFromArgv();
@@ -47,11 +48,21 @@ async function run(): Promise<void> {
       return;
     }
 
+    const maintenanceWindow = data.settings.maintenanceWindow ?? { startHour: 0, endHour: 24 };
+    if (!isWithinMaintenanceWindow(maintenanceWindow)) {
+      info('tick', 'Outside maintenance window — skipping', maintenanceWindow);
+      return;
+    }
+
     const adapter = getAdapter();
-    const summary = { processed: 0, printed: 0, skippedOffline: 0, failed: 0 };
+    const summary = { processed: 0, printed: 0, skippedOffline: 0, skippedOptOut: 0, failed: 0 };
 
     for (const printer of data.printers) {
       summary.processed++;
+      if (printer.autoMaintain === false) {
+        summary.skippedOptOut++;
+        continue;
+      }
       const lastEvent = latestEventFor(data, printer.id);
       const { status } = calculateStatus(lastEvent, printer.maxIdleDays, printer.warningDays);
       if (status !== 'overdue' && status !== 'urgent') continue;
