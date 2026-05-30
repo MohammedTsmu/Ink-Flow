@@ -37,40 +37,56 @@ export function createTray(mainWindow: BrowserWindow): Tray {
 
 // ── Icon loading ──────────────────────────────────────────────
 
+/**
+ * Per-platform tray icon sizing follows OS conventions:
+ *   Windows : 16×16 (system tray default)
+ *   macOS   : 22×22 + template flag (menubar; auto-inverts light/dark)
+ *   Linux   : 22×22 (status notifier area)
+ */
 function loadIcon(): Electron.NativeImage {
+  const isMac = process.platform === 'darwin';
+  const targetSize = process.platform === 'win32' ? 16 : 22;
   const candidates = [
     path.join(__dirname, '../../assets/icon.png'),
     path.join(process.resourcesPath || '', 'assets/icon.png'),
+    path.join(process.resourcesPath || '', 'app.asar.unpacked/assets/icon.png'),
   ];
   for (const p of candidates) {
     if (fs.existsSync(p)) {
-      return nativeImage.createFromPath(p).resize({ width: 16, height: 16 });
+      const img = nativeImage.createFromPath(p).resize({ width: targetSize, height: targetSize });
+      if (isMac) img.setTemplateImage(true);
+      return img;
     }
   }
-  return createFallbackIcon();
+  return createFallbackIcon(targetSize, isMac);
 }
 
-// ── Programmatic fallback icon (blue droplet, 16×16) ─────────
+// ── Programmatic fallback icon (droplet shape) ────────────────
 
-function createFallbackIcon(): Electron.NativeImage {
-  const size = 16;
+function createFallbackIcon(size: number, asTemplate: boolean): Electron.NativeImage {
   const pixels = Buffer.alloc(size * size * 4);
+  const center = (size - 1) / 2;
+  const radius = (size / 2) * (size / 2) - (size * 0.3);
 
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const i = (y * size + x) * 4;
-      const dx = x - 7.5, dy = y - 7.5;
-      if (dx * dx + dy * dy < 49) {
-        pixels[i] = 59;       // R
-        pixels[i + 1] = 130;  // G
-        pixels[i + 2] = 246;  // B
-        pixels[i + 3] = 255;  // A
+      const dx = x - center, dy = y - center;
+      if (dx * dx + dy * dy < radius) {
+        // Template images: opaque black, mac inverts as needed.
+        if (asTemplate) {
+          pixels[i] = 0; pixels[i + 1] = 0; pixels[i + 2] = 0; pixels[i + 3] = 255;
+        } else {
+          pixels[i] = 59; pixels[i + 1] = 130; pixels[i + 2] = 246; pixels[i + 3] = 255;
+        }
       }
     }
   }
 
   const png = buildPng(size, size, pixels);
-  return nativeImage.createFromBuffer(png).resize({ width: 16, height: 16 });
+  const img = nativeImage.createFromBuffer(png).resize({ width: size, height: size });
+  if (asTemplate) img.setTemplateImage(true);
+  return img;
 }
 
 function buildPng(w: number, h: number, rgba: Buffer): Buffer {

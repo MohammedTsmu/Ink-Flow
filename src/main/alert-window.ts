@@ -124,7 +124,7 @@ function buildAlertHtml(alerts: AlertData[]): string {
   html, body {
     background: transparent;
     overflow: hidden;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
     color: #e5e7eb;
     user-select: none;
   }

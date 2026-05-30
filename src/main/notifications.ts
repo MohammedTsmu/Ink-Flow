@@ -1,3 +1,4 @@
+import { app } from 'electron';
 import { getStore } from './store';
 import { runAutoMaintenancePrints } from './auto-print';
 import { getMainWindow } from './main';
@@ -75,26 +76,25 @@ function checkStatuses(): void {
   runAutoMaintenancePrints();
 }
 
-/** Flash the taskbar icon and show the window so the user notices alerts. */
+/**
+ * Grab the user's attention in a platform-appropriate way.
+ *   Windows / Linux : flashFrame  + restore-if-minimised
+ *   macOS           : app.dock.bounce('critical')  — flashFrame is no-op
+ * The window itself is NOT auto-shown on macOS because dock-bouncing is
+ * the established convention there; abruptly stealing the Space would
+ * be jarring.
+ */
 function grabAttention(): void {
   const win = getMainWindow();
   if (!win) return;
 
-  // Flash taskbar until the user focuses the window
+  if (process.platform === 'darwin') {
+    try { app.dock?.bounce('critical'); } catch { /* dock may not exist (headless test) */ }
+    return;
+  }
+
   win.flashFrame(true);
-
-  // If the window is hidden, show it
-  if (!win.isVisible()) {
-    win.show();
-  }
-
-  // If minimized, restore it
-  if (win.isMinimized()) {
-    win.restore();
-  }
-
-  // Stop flashing once the user focuses the window
-  win.once('focus', () => {
-    win.flashFrame(false);
-  });
+  if (!win.isVisible()) win.show();
+  if (win.isMinimized()) win.restore();
+  win.once('focus', () => { win.flashFrame(false); });
 }
