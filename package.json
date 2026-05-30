@@ -53,5 +53,9 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
     }
+  },
+  "dependencies": {
+    "@types/proper-lockfile": "^4.1.4",
+    "proper-lockfile": "^4.1.2"
   }
 }

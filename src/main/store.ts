@@ -1,4 +1,3 @@
-import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
 import {
@@ -8,13 +7,20 @@ import {
   StoreData,
 } from '../core/types';
 import { calculateStatus } from '../core/status';
-import { error, warn } from '../core/log';
+import { error, warn, info } from '../core/log';
+import {
+  readStoreFile,
+  writeStoreFileAtomic,
+  mtimeOf,
+  emptyStore,
+} from '../core/store-io';
 
 export type { PrinterRecord, EventRecord, AppSettings } from '../core/types';
 
 class Store {
   private data!: StoreData;
   private filePath: string;
+  private lastReadMtime = 0;
 
   constructor() {
     this.filePath = path.join(app.getPath('userData'), 'inkflow-data.json');
@@ -22,17 +28,31 @@ class Store {
   }
 
   private load(): void {
-    try {
-      const raw = fs.readFileSync(this.filePath, 'utf-8');
-      this.data = JSON.parse(raw);
+    const fromDisk = readStoreFile(this.filePath);
+    if (fromDisk) {
+      this.data = fromDisk;
       this.migrate();
-    } catch {
-      this.data = {
-        printers: [], events: [], nextPrinterId: 1, nextEventId: 1,
-        settings: { autoMaintenancePrint: false, theme: 'dark' },
-        lastPrintCheckTime: new Date().toISOString(),
-      };
+    } else {
+      this.data = emptyStore();
       this.save();
+    }
+    this.lastReadMtime = mtimeOf(this.filePath);
+  }
+
+  /**
+   * Re-read from disk if the file has been modified externally (e.g. by
+   * the headless tick). Cheap mtime probe; only re-reads when newer.
+   */
+  private refreshIfStale(): void {
+    const onDisk = mtimeOf(this.filePath);
+    if (onDisk > this.lastReadMtime + 1) {
+      const fresh = readStoreFile(this.filePath);
+      if (fresh) {
+        this.data = fresh;
+        this.migrate();
+        this.lastReadMtime = onDisk;
+        info('store', 'Refreshed from disk (external change detected)');
+      }
     }
   }
 
@@ -58,19 +78,14 @@ class Store {
   }
 
   private save(): void {
-    const dir = path.dirname(this.filePath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    // Atomic write: write to temp file then rename to prevent corruption
-    const tmpPath = this.filePath + '.tmp';
-    fs.writeFileSync(tmpPath, JSON.stringify(this.data, null, 2), 'utf-8');
-    fs.renameSync(tmpPath, this.filePath);
+    writeStoreFileAtomic(this.filePath, this.data);
+    this.lastReadMtime = mtimeOf(this.filePath);
   }
 
   // ── Printers ──────────────────────────────────────────────
 
   getPrinters(): PrinterRecord[] {
+    this.refreshIfStale();
     return [...this.data.printers].sort((a, b) => a.name.localeCompare(b.name));
   }
 
@@ -117,6 +132,7 @@ class Store {
   // ── Events ────────────────────────────────────────────────
 
   getEvents(printerId: number): EventRecord[] {
+    this.refreshIfStale();
     return this.data.events
       .filter(e => e.printerId === printerId)
       .sort((a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime());
@@ -141,6 +157,7 @@ class Store {
   }
 
   getAllEvents(): (EventRecord & { printerName: string })[] {
+    this.refreshIfStale();
     const printerMap = new Map(this.data.printers.map(p => [p.id, p.name]));
     return [...this.data.events]
       .sort((a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime())
@@ -155,6 +172,7 @@ class Store {
   // ── Status ────────────────────────────────────────────────
 
   getPrintersWithStatus() {
+    this.refreshIfStale();
     return this.getPrinters().map(printer => {
       const lastEvent = this.getLastEvent(printer.id);
       const { daysRemaining, status } = calculateStatus(lastEvent, printer.maxIdleDays, printer.warningDays);
