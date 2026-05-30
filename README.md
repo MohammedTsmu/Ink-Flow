@@ -1,10 +1,19 @@
 # 🖨️ Ink Flow — Printer Maintenance Tracker
 
-**Version 2.0.0** | Windows Desktop Application
+**Version 3.0.0** | Windows, macOS, and Linux
 
-Ink Flow is a smart Windows desktop app that helps prevent liquid ink printer nozzle clogging by tracking printer usage, sending automatic maintenance prints, detecting external print jobs, and alerting you when printers sit idle too long.
+Ink Flow is a cross-platform desktop app that helps prevent liquid ink printer nozzle clogging by tracking printer usage, sending automatic maintenance prints, detecting external print jobs, and alerting you when printers sit idle too long — **even when the app itself is closed**.
 
 > **Why?** Liquid ink printers (inkjet, EcoTank, SuperTank, etc.) can clog their nozzles if left unused for extended periods. Ink Flow ensures every printer gets used regularly — automatically.
+
+## What's new in v3.0
+
+- **Cross-platform.** Builds for Windows, macOS, and Linux. CUPS adapter covers Mac + Linux with the same printer logic.
+- **Background maintenance tick.** A headless helper registered with the OS scheduler (Task Scheduler / LaunchAgent / systemd `--user` timer) fires every 6 hours so overdue printers get a maintenance page even when the GUI is closed.
+- **Real offline detection.** TCP probes the printer's print port (9100) for network printers instead of trusting the spooler's cached status. No more "ready" when the printer has been off for an hour.
+- **Diagnostics panel.** Every tick, every print, every failure is logged. The new in-app Diagnostics view shows what Ink Flow has been doing while you weren't watching.
+- **One-click fix for "doesn't detect my prints".** On Windows the PrintService/Operational event log is disabled by default — Ink Flow now detects that and offers a one-click enable (UAC prompt).
+- **Per-printer opt-out and maintenance window.** Exclude specific printers from automation; restrict auto-prints to a time-of-day range.
 
 ---
 
