@@ -1,5 +1,6 @@
 import { PrinterAdapter } from './types';
 import { WindowsAdapter } from './windows';
+import { CupsAdapter } from './cups';
 
 export * from './types';
 
@@ -7,16 +8,22 @@ let cached: PrinterAdapter | null = null;
 
 /**
  * Get the printer adapter for the current platform. Cached after first
- * call. The CUPS adapter for macOS/Linux is added in Phase 3.1.
+ * call.
  */
 export function getAdapter(): PrinterAdapter {
   if (cached) return cached;
-  if (process.platform === 'win32') {
-    cached = new WindowsAdapter();
-    return cached;
+  switch (process.platform) {
+    case 'win32':
+      cached = new WindowsAdapter();
+      break;
+    case 'darwin':
+      cached = new CupsAdapter('darwin');
+      break;
+    case 'linux':
+      cached = new CupsAdapter('linux');
+      break;
+    default:
+      throw new Error(`Ink Flow does not support platform "${process.platform}".`);
   }
-  throw new Error(
-    `Ink Flow does not yet support platform "${process.platform}". ` +
-    'CUPS support for macOS and Linux ships in v3.0.',
-  );
+  return cached;
 }
