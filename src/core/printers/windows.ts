@@ -1,4 +1,4 @@
-import { exec, execFile, spawn, ChildProcessWithoutNullStreams } from 'child_process';
+import { exec, execFile, spawn, ChildProcess } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -159,7 +159,7 @@ export class WindowsAdapter implements PrinterAdapter {
     // are pushed as JSONL on stdout. We restart on crash with a 5 s
     // backoff so transient PowerShell failures don't kill detection.
     let stopped = false;
-    let proc: ChildProcessWithoutNullStreams | null = null;
+    let proc: ChildProcess | null = null;
     let restartTimer: NodeJS.Timeout | null = null;
     let stdoutBuffer = '';
 
@@ -199,16 +199,19 @@ export class WindowsAdapter implements PrinterAdapter {
         return;
       }
 
-      proc.stdout.setEncoding('utf-8');
-      proc.stdout.on('data', (chunk: string) => {
-        stdoutBuffer += chunk;
-        let nl: number;
-        while ((nl = stdoutBuffer.indexOf('\n')) >= 0) {
-          const line = stdoutBuffer.slice(0, nl);
-          stdoutBuffer = stdoutBuffer.slice(nl + 1);
-          onLine(line);
-        }
-      });
+      const stdout = proc.stdout;
+      if (stdout) {
+        stdout.setEncoding('utf-8');
+        stdout.on('data', (chunk: string) => {
+          stdoutBuffer += chunk;
+          let nl: number;
+          while ((nl = stdoutBuffer.indexOf('\n')) >= 0) {
+            const line = stdoutBuffer.slice(0, nl);
+            stdoutBuffer = stdoutBuffer.slice(nl + 1);
+            onLine(line);
+          }
+        });
+      }
       proc.on('exit', (code) => {
         if (stopped) return;
         warn('windows-adapter', 'print-watcher exited; restarting', { code });
