@@ -110,6 +110,15 @@ export interface ScheduleStatus {
   lastRunAt?: string;
 }
 
+export interface TickSummary {
+  since: string;
+  ticksRan: number;
+  prints: number;
+  offlineSkips: number;
+  failures: number;
+  printersServed: string[];
+}
+
 declare global {
   interface Window {
     api: {
@@ -144,6 +153,9 @@ declare global {
       getScheduleStatus: () => Promise<ScheduleStatus>;
       installSchedule: () => Promise<ScheduleResult>;
       uninstallSchedule: () => Promise<ScheduleResult>;
+      // 3.0.11: tick summary on launch
+      getTickSummary: () => Promise<TickSummary | null>;
+      markSummarySeen: () => Promise<boolean>;
       // Alert listener
       onPrinterAlerts: (callback: (alerts: AlertItem[]) => void) => () => void;
     };

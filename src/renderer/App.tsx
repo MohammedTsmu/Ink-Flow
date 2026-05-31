@@ -8,6 +8,7 @@ import HistoryPanel from './components/HistoryPanel';
 import SettingsPanel from './components/SettingsPanel';
 import StatisticsPanel from './components/StatisticsPanel';
 import DiagnosticsPanel from './components/DiagnosticsPanel';
+import TickSummaryBanner from './components/TickSummaryBanner';
 import AlertModal from './components/AlertModal';
 import { PrinterWithStatus, AlertItem } from './types';
 
@@ -55,6 +56,7 @@ export default function App() {
 
   return (
     <Layout>
+      <TickSummaryBanner />
       <Dashboard
         printers={printers}
         onAddPrinter={() => setShowAddModal(true)}

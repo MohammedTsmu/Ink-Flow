@@ -8,6 +8,7 @@ import { sendTestPrint } from './auto-print';
 import { readRecentEntries } from '../core/log';
 import { getAdapter } from '../core/printers';
 import { getScheduleStatus, installSchedule, uninstallSchedule, refreshScheduleIfInstalled } from './schedule';
+import { buildTickSummary, summaryWorthShowing } from '../core/tick-summary';
 
 export function setupIpcHandlers(): void {
   const store = getStore();
@@ -95,6 +96,17 @@ export function setupIpcHandlers(): void {
   ipcMain.handle('get-schedule-status', () => getScheduleStatus());
   ipcMain.handle('install-schedule', () => installSchedule());
   ipcMain.handle('uninstall-schedule', () => uninstallSchedule());
+
+  // Tick summary since last GUI launch (3.0.11+)
+  ipcMain.handle('get-tick-summary', () => {
+    const since = store.getLastGuiStartAt() || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const summary = buildTickSummary(readRecentEntries(1000), since);
+    return summaryWorthShowing(summary) ? summary : null;
+  });
+  ipcMain.handle('mark-summary-seen', () => {
+    store.setLastGuiStartAt(new Date().toISOString());
+    return true;
+  });
 
   // Phase 3: Backup import
   ipcMain.handle('import-backup', async () => {

@@ -66,4 +66,17 @@ export interface StoreData {
   nextEventId: number;
   settings: AppSettings;
   lastPrintCheckTime: string;
+  /** ISO timestamp of the most recent GUI session start. */
+  lastGuiStartAt?: string;
+}
+
+export interface TickSummary {
+  /** Window over which the summary is taken. */
+  since: string;
+  ticksRan: number;
+  prints: number;
+  offlineSkips: number;
+  failures: number;
+  /** Printer names that received auto-prints, deduped. */
+  printersServed: string[];
 }

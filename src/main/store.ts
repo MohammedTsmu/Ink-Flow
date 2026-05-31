@@ -285,6 +285,17 @@ class Store {
     this.save();
   }
 
+  // ── GUI session bookkeeping (for tick summary on launch) ────
+
+  getLastGuiStartAt(): string | undefined {
+    return this.data.lastGuiStartAt;
+  }
+
+  setLastGuiStartAt(iso: string): void {
+    this.data.lastGuiStartAt = iso;
+    this.save();
+  }
+
   // ── Backup / Restore ──────────────────────────────────────
 
   exportData(): string {

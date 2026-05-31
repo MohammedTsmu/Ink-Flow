@@ -35,6 +35,9 @@ contextBridge.exposeInMainWorld('api', {
   getScheduleStatus: () => ipcRenderer.invoke('get-schedule-status'),
   installSchedule: () => ipcRenderer.invoke('install-schedule'),
   uninstallSchedule: () => ipcRenderer.invoke('uninstall-schedule'),
+  // Tick summary on launch (3.0.11+)
+  getTickSummary: () => ipcRenderer.invoke('get-tick-summary'),
+  markSummarySeen: () => ipcRenderer.invoke('mark-summary-seen'),
   // Alert listener
   onPrinterAlerts: (callback: (alerts: Array<{ name: string; status: string; level: string; message: string }>) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, alerts: Array<{ name: string; status: string; level: string; message: string }>) => callback(alerts);
