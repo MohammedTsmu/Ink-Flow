@@ -80,6 +80,7 @@ export function emptyStore(): StoreData {
       autoMaintenancePrint: false,
       theme: 'dark',
       maintenanceWindow: { startHour: 0, endHour: 24 },
+      tickIntervalSeconds: 6 * 60 * 60,
     },
     lastPrintCheckTime: new Date().toISOString(),
   };

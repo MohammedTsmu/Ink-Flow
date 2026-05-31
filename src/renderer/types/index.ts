@@ -48,6 +48,7 @@ export interface AppSettings {
   autoMaintenancePrint: boolean;
   theme: 'dark' | 'light';
   maintenanceWindow: MaintenanceWindow;
+  tickIntervalSeconds: number;
 }
 
 export interface PrinterStats {

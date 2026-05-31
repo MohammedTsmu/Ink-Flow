@@ -49,6 +49,8 @@ export interface AppSettings {
   theme: 'dark' | 'light';
   /** Time-of-day window during which auto-prints may fire. */
   maintenanceWindow: MaintenanceWindow;
+  /** How often the headless background tick fires, in seconds. */
+  tickIntervalSeconds: number;
 }
 
 export interface PrinterWithStatus extends PrinterRecord {

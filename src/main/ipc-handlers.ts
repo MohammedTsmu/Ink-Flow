@@ -7,7 +7,7 @@ import { isAutoStartEnabled, setAutoStart } from './autostart';
 import { sendTestPrint } from './auto-print';
 import { readRecentEntries } from '../core/log';
 import { getAdapter } from '../core/printers';
-import { getScheduleStatus, installSchedule, uninstallSchedule } from './schedule';
+import { getScheduleStatus, installSchedule, uninstallSchedule, refreshScheduleIfInstalled } from './schedule';
 
 export function setupIpcHandlers(): void {
   const store = getStore();
@@ -44,7 +44,17 @@ export function setupIpcHandlers(): void {
 
   // Phase 3: Settings
   ipcMain.handle('get-settings', () => store.getSettings());
-  ipcMain.handle('update-settings', (_e, partial) => store.updateSettings(partial));
+  ipcMain.handle('update-settings', async (_e, partial) => {
+    const before = store.getSettings();
+    const after = store.updateSettings(partial);
+    // If tick interval changed and a schedule is installed, re-register
+    // it so the new cadence takes effect without the user toggling off/on.
+    if (partial && typeof partial.tickIntervalSeconds === 'number'
+        && partial.tickIntervalSeconds !== before.tickIntervalSeconds) {
+      try { await refreshScheduleIfInstalled(); } catch { /* logged inside */ }
+    }
+    return after;
+  });
 
   // Phase 3: Statistics
   ipcMain.handle('get-statistics', () => store.getStatistics());

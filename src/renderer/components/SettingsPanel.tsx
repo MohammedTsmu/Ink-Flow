@@ -66,6 +66,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [schedulePending, setSchedulePending] = useState(false);
   const [scheduleResult, setScheduleResult] = useState<ScheduleResult | null>(null);
   const [maintenanceWindow, setMaintenanceWindow] = useState<{ startHour: number; endHour: number } | null>(null);
+  const [tickInterval, setTickInterval] = useState<number>(6 * 60 * 60);
 
   useEffect(() => { loadSettings(); }, []);
 
@@ -82,6 +83,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
       setAutoStart(enabled);
       setAutoMaintenancePrint(settings.autoMaintenancePrint);
       setMaintenanceWindow(settings.maintenanceWindow ?? { startHour: 0, endHour: 24 });
+      setTickInterval(settings.tickIntervalSeconds ?? 6 * 60 * 60);
       setAppVersion(version);
       setDetection(detectionStatus);
       setSchedule(scheduleStatus);
@@ -106,6 +108,23 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
     setMaintenanceWindow(next);
     await window.api.updateSettings({ maintenanceWindow: next });
   };
+
+  const handleTickIntervalChange = async (seconds: number) => {
+    setTickInterval(seconds);
+    await window.api.updateSettings({ tickIntervalSeconds: seconds });
+    // The schedule auto-reinstalls server-side; refresh status to show new cadence.
+    const refreshed = await window.api.getScheduleStatus();
+    setSchedule(refreshed);
+  };
+
+  const TICK_OPTIONS = [
+    { value: 60 * 60,           label: 'Every hour' },
+    { value: 3 * 60 * 60,       label: 'Every 3 hours' },
+    { value: 6 * 60 * 60,       label: 'Every 6 hours' },
+    { value: 12 * 60 * 60,      label: 'Every 12 hours' },
+    { value: 24 * 60 * 60,      label: 'Once a day' },
+    { value: 7 * 24 * 60 * 60,  label: 'Once a week' },
+  ];
 
   const handleEnableDetection = async () => {
     setFixing(true);
@@ -260,7 +279,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="font-medium text-sm">Background Maintenance</p>
-                        <p className={`text-xs ${subtle} mt-0.5`}>Check overdue printers every 6 hours even when the app is closed</p>
+                        <p className={`text-xs ${subtle} mt-0.5`}>Check overdue printers on a schedule even when the app is closed</p>
                       </div>
                       <button
                         onClick={handleScheduleToggle}
@@ -269,6 +288,17 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
                       >
                         <span className={toggleDotClass(!!schedule?.installed)} />
                       </button>
+                    </div>
+                    <div className="mt-3 flex items-center gap-2 flex-wrap">
+                      <span className={`text-xs ${body}`}>Run</span>
+                      <select
+                        value={tickInterval}
+                        onChange={(e) => handleTickIntervalChange(parseInt(e.target.value))}
+                        disabled={!schedule?.installed}
+                        className={`px-2 py-1 ${isDark ? 'bg-gray-700 text-gray-200 border-gray-600' : 'bg-white text-gray-800 border-gray-300'} border rounded text-xs disabled:opacity-50`}
+                      >
+                        {TICK_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
                     </div>
                     {schedule?.detail && <p className={`text-xs ${subtle} mt-2`}>{schedule.detail}</p>}
                     {scheduleResult && (

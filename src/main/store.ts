@@ -63,10 +63,14 @@ class Store {
         autoMaintenancePrint: false,
         theme: 'dark',
         maintenanceWindow: { startHour: 0, endHour: 24 },
+        tickIntervalSeconds: 6 * 60 * 60,
       };
     }
     if (!this.data.settings.maintenanceWindow) {
       this.data.settings.maintenanceWindow = { startHour: 0, endHour: 24 };
+    }
+    if (typeof this.data.settings.tickIntervalSeconds !== 'number' || this.data.settings.tickIntervalSeconds < 60) {
+      this.data.settings.tickIntervalSeconds = 6 * 60 * 60;
     }
     if (!this.data.lastPrintCheckTime) {
       this.data.lastPrintCheckTime = new Date().toISOString();
@@ -201,6 +205,7 @@ class Store {
         autoMaintenancePrint: false,
         theme: 'dark',
         maintenanceWindow: { startHour: 0, endHour: 24 },
+        tickIntervalSeconds: 6 * 60 * 60,
       };
     }
     return { ...this.data.settings };
@@ -212,6 +217,7 @@ class Store {
         autoMaintenancePrint: false,
         theme: 'dark',
         maintenanceWindow: { startHour: 0, endHour: 24 },
+        tickIntervalSeconds: 6 * 60 * 60,
       };
     }
     Object.assign(this.data.settings, partial);

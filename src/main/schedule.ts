@@ -8,6 +8,7 @@ import {
   ScheduleResult,
   ScheduleStatus,
 } from '../core/schedule';
+import { getStore } from './store';
 
 /**
  * Glue between the OS-agnostic ScheduleProvider and Electron's
@@ -23,13 +24,28 @@ function getTickScriptPath(): string {
 }
 
 function buildConfig(): ScheduleConfig {
+  const settings = getStore().getSettings();
+  const interval = settings.tickIntervalSeconds && settings.tickIntervalSeconds >= 60
+    ? settings.tickIntervalSeconds
+    : TICK_INTERVAL_SECONDS;
   return {
     label: TICK_LABEL,
     executable: process.execPath,
     args: [getTickScriptPath(), `--user-data=${app.getPath('userData')}`],
     env: { ELECTRON_RUN_AS_NODE: '1' },
-    intervalSeconds: TICK_INTERVAL_SECONDS,
+    intervalSeconds: interval,
   };
+}
+
+/**
+ * If the schedule is currently installed, re-install it with the
+ * current settings (typically called after the user changes
+ * tickIntervalSeconds in Settings).
+ */
+export async function refreshScheduleIfInstalled(): Promise<void> {
+  const status = await getScheduleProvider().status(TICK_LABEL);
+  if (!status.installed) return;
+  await getScheduleProvider().install(buildConfig());
 }
 
 export function getScheduleStatus(): Promise<ScheduleStatus> {
