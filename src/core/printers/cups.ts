@@ -218,12 +218,45 @@ export class CupsAdapter implements PrinterAdapter {
   }
 
   async attemptFixDetection(): Promise<DetectionFixResult> {
-    // Mac/Linux fixes here are out-of-band (System Settings prompt for FDA,
-    // or sudo chmod). We don't try to elevate from inside the app.
-    info('cups-adapter', 'No automatic fix path on CUPS — user instructions only');
+    // macOS: the only fix path is for the user to grant Ink Flow Full
+    // Disk Access to the CUPS log directory. We can't grant it ourselves,
+    // but we can deep-link straight to the right System Settings pane so
+    // the user only has to click "+", pick Ink Flow, then restart the app.
+    if (this.platform === 'darwin') {
+      const status = await this.checkDetectionStatus();
+      if (!status.available) {
+        return new Promise((resolve) => {
+          execFile(
+            'open',
+            ['x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles'],
+            { timeout: 5000 },
+            (err) => {
+              if (err) {
+                warn('cups-adapter', 'Could not open System Settings', err);
+                resolve({
+                  success: false,
+                  reason: 'Open System Settings → Privacy & Security → Full Disk Access and add Ink Flow manually.',
+                });
+                return;
+              }
+              info('cups-adapter', 'Opened FDA pane in System Settings');
+              resolve({
+                success: false, // Still false until the user grants + restarts.
+                reason: 'Opened System Settings. Click the "+" button, add Ink Flow, then restart the app.',
+              });
+            },
+          );
+        });
+      }
+      // Already OK on macOS.
+      return { success: true };
+    }
+
+    // Linux: no automatic path. User needs to chmod or join lpadmin.
+    info('cups-adapter', 'No automatic fix path on Linux — user instructions only');
     return {
       success: false,
-      reason: 'No automatic fix available. Follow the instructions in the status message.',
+      reason: 'Run: sudo chmod 644 /var/log/cups/page_log  (or add your user to the lpadmin group, then log out and back in).',
     };
   }
 }
