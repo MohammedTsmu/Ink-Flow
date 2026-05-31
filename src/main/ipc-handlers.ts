@@ -9,6 +9,7 @@ import { readRecentEntries } from '../core/log';
 import { getAdapter } from '../core/printers';
 import { getScheduleStatus, installSchedule, uninstallSchedule, refreshScheduleIfInstalled } from './schedule';
 import { buildTickSummary, summaryWorthShowing } from '../core/tick-summary';
+import { buildTickStats } from '../core/tick-stats';
 
 export function setupIpcHandlers(): void {
   const store = getStore();
@@ -107,6 +108,9 @@ export function setupIpcHandlers(): void {
     store.setLastGuiStartAt(new Date().toISOString());
     return true;
   });
+
+  // All-time tick stats for the Statistics panel (3.0.12+)
+  ipcMain.handle('get-tick-stats', () => buildTickStats(readRecentEntries(5000)));
 
   // Phase 3: Backup import
   ipcMain.handle('import-backup', async () => {

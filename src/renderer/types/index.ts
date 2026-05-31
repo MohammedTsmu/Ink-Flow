@@ -119,6 +119,14 @@ export interface TickSummary {
   printersServed: string[];
 }
 
+export interface TickStats {
+  ticksRan: number;
+  prints: number;
+  offlineSkips: number;
+  failures: number;
+  uniquePrintersServed: number;
+}
+
 declare global {
   interface Window {
     api: {
@@ -156,6 +164,8 @@ declare global {
       // 3.0.11: tick summary on launch
       getTickSummary: () => Promise<TickSummary | null>;
       markSummarySeen: () => Promise<boolean>;
+      // 3.0.12: aggregated tick stats
+      getTickStats: () => Promise<TickStats>;
       // Alert listener
       onPrinterAlerts: (callback: (alerts: AlertItem[]) => void) => () => void;
     };

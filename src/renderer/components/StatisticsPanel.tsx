@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Statistics } from '../types';
+import { Statistics, TickStats } from '../types';
 import { useTheme } from '../ThemeContext';
 import { useEscapeKey } from '../hooks/useEscapeKey';
 
@@ -12,6 +12,7 @@ export default function StatisticsPanel({ onClose }: StatisticsPanelProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [stats, setStats] = useState<Statistics | null>(null);
+  const [tickStats, setTickStats] = useState<TickStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,8 +22,12 @@ export default function StatisticsPanel({ onClose }: StatisticsPanelProps) {
   const loadStats = async () => {
     setLoading(true);
     try {
-      const data = await window.api.getStatistics();
+      const [data, tStats] = await Promise.all([
+        window.api.getStatistics(),
+        window.api.getTickStats(),
+      ]);
       setStats(data);
+      setTickStats(tStats);
     } finally {
       setLoading(false);
     }
@@ -64,6 +69,36 @@ export default function StatisticsPanel({ onClose }: StatisticsPanelProps) {
                   <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-1`}>Total Events</p>
                 </div>
               </div>
+
+              {/* Background tick activity */}
+              {tickStats && (
+                <div>
+                  <h3 className={`font-semibold text-sm mb-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Background Activity</h3>
+                  <div className="grid grid-cols-4 gap-3">
+                    <div className={`${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg p-3 text-center`}>
+                      <p className="text-2xl font-bold text-cyan-400">{tickStats.ticksRan}</p>
+                      <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-1`}>Tick Runs</p>
+                    </div>
+                    <div className={`${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg p-3 text-center`}>
+                      <p className="text-2xl font-bold text-green-400">{tickStats.prints}</p>
+                      <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-1`}>Auto Prints</p>
+                    </div>
+                    <div className={`${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg p-3 text-center`}>
+                      <p className="text-2xl font-bold text-yellow-400">{tickStats.offlineSkips}</p>
+                      <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-1`}>Offline Skips</p>
+                    </div>
+                    <div className={`${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg p-3 text-center`}>
+                      <p className={`text-2xl font-bold ${tickStats.failures > 0 ? 'text-red-400' : (isDark ? 'text-gray-400' : 'text-gray-500')}`}>{tickStats.failures}</p>
+                      <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-1`}>Failures</p>
+                    </div>
+                  </div>
+                  {tickStats.ticksRan === 0 && (
+                    <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-2`}>
+                      No background tick activity yet. Enable Background Maintenance in Settings to keep printers maintained when the app is closed.
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* 30 day activity chart */}
               <div>
