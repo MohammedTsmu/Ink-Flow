@@ -179,6 +179,9 @@ declare global {
       getUpdateState: () => Promise<UpdateState>;
       checkForUpdates: () => Promise<UpdateState>;
       quitAndInstallUpdate: () => Promise<boolean>;
+      // 3.0.18: first-run wizard
+      isFirstRunCompleted: () => Promise<boolean>;
+      markFirstRunCompleted: () => Promise<boolean>;
       // Alert listener
       onPrinterAlerts: (callback: (alerts: AlertItem[]) => void) => () => void;
     };

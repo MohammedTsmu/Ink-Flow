@@ -68,6 +68,12 @@ export interface StoreData {
   lastPrintCheckTime: string;
   /** ISO timestamp of the most recent GUI session start. */
   lastGuiStartAt?: string;
+  /**
+   * ISO timestamp when the user finished (or explicitly skipped) the
+   * first-run wizard. Undefined means the wizard hasn't been seen yet
+   * and should be presented on next launch.
+   */
+  firstRunCompletedAt?: string;
 }
 
 export interface TickSummary {

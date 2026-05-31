@@ -9,6 +9,7 @@ import SettingsPanel from './components/SettingsPanel';
 import StatisticsPanel from './components/StatisticsPanel';
 import DiagnosticsPanel from './components/DiagnosticsPanel';
 import TickSummaryBanner from './components/TickSummaryBanner';
+import FirstRunWizard from './components/FirstRunWizard';
 import AlertModal from './components/AlertModal';
 import { PrinterWithStatus, AlertItem } from './types';
 
@@ -22,7 +23,12 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
+
+  useEffect(() => {
+    window.api.isFirstRunCompleted().then((done) => setShowWizard(!done));
+  }, []);
 
   const loadPrinters = async () => {
     const data = await window.api.getPrintersWithStatus();
@@ -113,6 +119,14 @@ export default function App() {
         <AlertModal
           alerts={alerts}
           onDismiss={() => setAlerts([])}
+        />
+      )}
+      {showWizard && (
+        <FirstRunWizard
+          onFinish={() => {
+            setShowWizard(false);
+            loadPrinters();
+          }}
         />
       )}
     </Layout>

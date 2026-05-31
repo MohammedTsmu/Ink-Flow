@@ -44,6 +44,9 @@ contextBridge.exposeInMainWorld('api', {
   getUpdateState: () => ipcRenderer.invoke('get-update-state'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   quitAndInstallUpdate: () => ipcRenderer.invoke('quit-and-install-update'),
+  // First-run wizard (3.0.18+)
+  isFirstRunCompleted: () => ipcRenderer.invoke('is-first-run-completed'),
+  markFirstRunCompleted: () => ipcRenderer.invoke('mark-first-run-completed'),
   // Alert listener
   onPrinterAlerts: (callback: (alerts: Array<{ name: string; status: string; level: string; message: string }>) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, alerts: Array<{ name: string; status: string; level: string; message: string }>) => callback(alerts);

@@ -118,6 +118,10 @@ export function setupIpcHandlers(): void {
   ipcMain.handle('check-for-updates', () => checkForUpdatesNow());
   ipcMain.handle('quit-and-install-update', () => { quitAndInstallNow(); return true; });
 
+  // First-run wizard (3.0.18+)
+  ipcMain.handle('is-first-run-completed', () => store.isFirstRunCompleted());
+  ipcMain.handle('mark-first-run-completed', () => { store.markFirstRunCompleted(); return true; });
+
   // Phase 3: Backup import
   ipcMain.handle('import-backup', async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog({

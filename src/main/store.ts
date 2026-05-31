@@ -296,6 +296,17 @@ class Store {
     this.save();
   }
 
+  // ── First-run wizard ─────────────────────────────────────────
+
+  isFirstRunCompleted(): boolean {
+    return !!this.data.firstRunCompletedAt;
+  }
+
+  markFirstRunCompleted(): void {
+    this.data.firstRunCompletedAt = new Date().toISOString();
+    this.save();
+  }
+
   // ── Backup / Restore ──────────────────────────────────────
 
   exportData(): string {
