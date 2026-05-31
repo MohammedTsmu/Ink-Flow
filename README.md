@@ -1,13 +1,28 @@
 # 🖨️ Ink Flow — Printer Maintenance Tracker
 
-**Version 3.0.2** | Windows, macOS, and Linux
+**Version 3.1.0** | Windows, macOS, and Linux
 
 [![Build status](https://ci.appveyor.com/api/projects/status/github/MohammedTsmu/Ink-Flow?branch=main&svg=true)](https://ci.appveyor.com/project/MohammedTsmu/Ink-Flow)
 [![Latest release](https://img.shields.io/github/v/release/MohammedTsmu/Ink-Flow?label=release)](https://github.com/MohammedTsmu/Ink-Flow/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-> **Versioning policy:** every commit increments the patch number in `package.json`. Run `npm run bump` (or `npm version patch --no-git-tag-version`) before committing — that way the in-app About panel always identifies exactly which code state is running. Tags (`vX.Y.Z` pushed to GitHub) are reserved for installer releases, not every internal edit.
+> **Versioning policy:** every commit increments the patch number in `package.json`. Run `npm run bump` (or `npm version patch --no-git-tag-version`) before committing — that way the in-app About panel always identifies exactly which code state is running. Tags (`vX.Y.Z` pushed to GitHub) are reserved for installer releases.
 >
-> **CI:** Windows + macOS + Linux builds run on every push via [AppVeyor](https://ci.appveyor.com/project/MohammedTsmu/Ink-Flow) (because GitHub Actions is account-locked for billing). `.github/workflows/release.yml` is kept in place and will resume on tag push the moment GH billing is resolved.
+> **CI:** Windows + macOS + Linux builds run on every push via [AppVeyor](https://ci.appveyor.com/project/MohammedTsmu/Ink-Flow). Tag pushes auto-publish installers to the GitHub Releases page.
+
+## What's new in v3.1
+
+- **Auto-updater** — the running app now checks GitHub Releases on startup, downloads new versions in the background, and applies them on next quit. No more manual download/install.
+- **Real-time print detection** — Windows now uses a `.NET EventLogWatcher` subscription instead of 5-minute polling. Prints are detected within a second of the spooler finishing.
+- **First-run wizard** — new installs walk through Detect printers → Background tick → Print log enable in three guided steps.
+- **Single-instance enforcement** — clicking the app multiple times re-focuses the existing window instead of spawning duplicates.
+- **Color test page** — auto-maintenance now prints a CMYK + composite + gradient pattern that exercises every ink channel, replacing the black-only text page.
+- **Settings redesigned** — four-tab layout (General / Automation / Detection / Backup), each tab fits without scrolling.
+- **Customizable tick interval** — hourly to weekly options.
+- **Tick summary on launch** — banner shows what the background did while you were away.
+- **Statistics: Background Activity** — verify the tick is doing real work (tick runs / auto-prints / offline skips / failures).
+- **macOS Full Disk Access deep-link** — Enable button opens the right System Settings pane directly.
+- **MIT licensed** — proper LICENSE file, anyone can fork.
 
 Ink Flow is a cross-platform desktop app that helps prevent liquid ink printer nozzle clogging by tracking printer usage, sending automatic maintenance prints, detecting external print jobs, and alerting you when printers sit idle too long — **even when the app itself is closed**.
 
