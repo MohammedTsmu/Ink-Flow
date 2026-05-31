@@ -140,6 +140,30 @@ class Store {
     return printer;
   }
 
+  /** Internal: stamp throttling fields on a printer without bumping updatedAt. */
+  markAlertSent(id: number, level: string): void {
+    const printer = this.data.printers.find(p => p.id === id);
+    if (!printer) return;
+    printer.lastAlertedAt = new Date().toISOString();
+    printer.lastAlertedLevel = level;
+    this.save();
+  }
+
+  markAutoPrintNotified(id: number): void {
+    const printer = this.data.printers.find(p => p.id === id);
+    if (!printer) return;
+    printer.lastAutoPrintNotifiedAt = new Date().toISOString();
+    this.save();
+  }
+
+  clearAlertHistory(id: number): void {
+    const printer = this.data.printers.find(p => p.id === id);
+    if (!printer) return;
+    delete printer.lastAlertedAt;
+    delete printer.lastAlertedLevel;
+    this.save();
+  }
+
   deletePrinter(id: number): void {
     this.data.printers = this.data.printers.filter(p => p.id !== id);
     this.data.events = this.data.events.filter(e => e.printerId !== id);

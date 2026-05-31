@@ -23,6 +23,16 @@ export interface PrinterRecord {
    * printers (large-format, photo) that the user wants to run manually.
    */
   autoMaintain: boolean;
+  /**
+   * Last time the user was alerted about this printer (any non-good
+   * status). Used to throttle popups so a printer that stays "overdue"
+   * for two weeks doesn't fire 336 popups.
+   */
+  lastAlertedAt?: string;
+  /** Level at which we last alerted — escalation always re-notifies. */
+  lastAlertedLevel?: string;
+  /** Last native-notification fired by auto-print for this printer. */
+  lastAutoPrintNotifiedAt?: string;
 }
 
 export interface EventRecord {
