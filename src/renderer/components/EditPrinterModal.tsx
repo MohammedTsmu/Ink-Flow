@@ -19,6 +19,7 @@ export default function EditPrinterModal({ printer, onClose, onSave }: EditPrint
   const [maxIdleDays, setMaxIdleDays] = useState(printer.maxIdleDays);
   const [warningDays, setWarningDays] = useState(printer.warningDays);
   const [autoMaintain, setAutoMaintain] = useState(printer.autoMaintain !== false);
+  const [trustUserPrints, setTrustUserPrints] = useState(printer.trustUserPrints !== false);
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,6 +35,7 @@ export default function EditPrinterModal({ printer, onClose, onSave }: EditPrint
         maxIdleDays,
         warningDays: Math.min(warningDays, maxIdleDays),
         autoMaintain,
+        trustUserPrints,
       });
       onSave();
       onClose();
@@ -115,9 +117,27 @@ export default function EditPrinterModal({ printer, onClose, onSave }: EditPrint
             <button
               type="button"
               onClick={() => setAutoMaintain(!autoMaintain)}
-              className={`relative w-11 h-6 rounded-full transition-colors ${autoMaintain ? 'bg-blue-600' : isDark ? 'bg-gray-600' : 'bg-gray-300'}`}
+              className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${autoMaintain ? 'bg-blue-600' : isDark ? 'bg-gray-600' : 'bg-gray-300'}`}
             >
               <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${autoMaintain ? 'translate-x-5' : 'translate-x-0'}`} />
+            </button>
+          </div>
+
+          <div className={`flex items-start justify-between gap-3 p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg`}>
+            <div>
+              <p className="font-medium text-sm">Trust auto-detected prints</p>
+              <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-0.5`}>
+                When ON, every detected print resets the maintenance timer (assumes color was used).
+                Turn <strong>OFF</strong> if this printer is used mostly for black-and-white text —
+                that way the color maintenance schedule still runs even when you print frequently.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTrustUserPrints(!trustUserPrints)}
+              className={`relative w-11 h-6 rounded-full transition-colors shrink-0 mt-0.5 ${trustUserPrints ? 'bg-blue-600' : isDark ? 'bg-gray-600' : 'bg-gray-300'}`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${trustUserPrints ? 'translate-x-5' : 'translate-x-0'}`} />
             </button>
           </div>
 

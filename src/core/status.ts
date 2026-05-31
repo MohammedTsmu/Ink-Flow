@@ -1,4 +1,4 @@
-import { EventRecord, PrinterStatus } from './types';
+import { EventRecord, PrinterStatus, EventCategory } from './types';
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
@@ -38,4 +38,43 @@ export function calculateStatus(
   else status = 'good';
 
   return { daysRemaining: remaining, status };
+}
+
+/**
+ * Pick the most recent event from a list that counts as "exercised the
+ * print head". When trustUserPrints is true (or undefined for legacy
+ * data), every event counts. When false, only color-test prints and
+ * cleans count — external prints become informational and don't reset
+ * the maintenance timer, because we can't know which channels fired.
+ */
+export function pickStatusEvent(
+  events: EventRecord[],
+  trustUserPrints: boolean = true,
+): EventRecord | null {
+  if (events.length === 0) return null;
+  const sorted = [...events].sort((a, b) =>
+    new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime(),
+  );
+  if (trustUserPrints) return sorted[0] ?? null;
+
+  const allowed: EventCategory[] = ['maintenance', 'clean'];
+  for (const e of sorted) {
+    if (e.category && allowed.includes(e.category)) return e;
+    // Legacy events (no category) — classify on the fly by notes/type.
+    if (!e.category) {
+      const cat = inferCategory(e);
+      if (allowed.includes(cat)) return e;
+    }
+  }
+  return null;
+}
+
+/** Infer the category of an old (uncategorised) event from its eventType+notes. */
+export function inferCategory(event: EventRecord): EventCategory {
+  if (event.eventType === 'clean') return 'clean';
+  const n = (event.notes || '').toLowerCase();
+  if (n.includes('maintenance') || n.includes('initial setup') || n.includes('test print')) {
+    return 'maintenance';
+  }
+  return 'user';
 }

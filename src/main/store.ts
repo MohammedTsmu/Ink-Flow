@@ -6,7 +6,8 @@ import {
   AppSettings,
   StoreData,
 } from '../core/types';
-import { calculateStatus } from '../core/status';
+import { calculateStatus, pickStatusEvent, inferCategory } from '../core/status';
+import { EventCategory } from '../core/types';
 import { error, warn, info } from '../core/log';
 import {
   readStoreFile,
@@ -80,6 +81,13 @@ class Store {
     // Backfill autoMaintain — pre-v3 records didn't have it; default true.
     for (const p of this.data.printers) {
       if (typeof p.autoMaintain !== 'boolean') p.autoMaintain = true;
+      // Backfill trustUserPrints — pre-3.1.3 default to true for backwards
+      // compat (auto-detected prints continue to reset the timer).
+      if (typeof p.trustUserPrints !== 'boolean') p.trustUserPrints = true;
+    }
+    // Backfill category on legacy events so future reads short-circuit.
+    for (const e of this.data.events) {
+      if (!e.category) e.category = inferCategory(e);
     }
     // Recalculate ID counters to prevent duplicates
     const maxPrinterId = this.data.printers.reduce((m, p) => Math.max(m, p.id), 0);
@@ -104,7 +112,7 @@ class Store {
     return [...this.data.printers].sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  addPrinter(input: { name: string; model: string; inkType: string; maxIdleDays: number; warningDays: number; autoMaintain?: boolean }): PrinterRecord {
+  addPrinter(input: { name: string; model: string; inkType: string; maxIdleDays: number; warningDays: number; autoMaintain?: boolean; trustUserPrints?: boolean }): PrinterRecord {
     const now = new Date().toISOString();
     const printer: PrinterRecord = {
       id: this.data.nextPrinterId++,
@@ -114,17 +122,18 @@ class Store {
       maxIdleDays: input.maxIdleDays,
       warningDays: input.warningDays,
       autoMaintain: input.autoMaintain ?? true,
+      trustUserPrints: input.trustUserPrints ?? true,
       createdAt: now,
       updatedAt: now,
     };
     this.data.printers.push(printer);
     this.save();
     // Create initial maintenance event so the countdown starts now
-    this.addEvent({ printerId: printer.id, eventType: 'print', notes: 'Initial setup – timer started' });
+    this.addEvent({ printerId: printer.id, eventType: 'print', notes: 'Initial setup – timer started', category: 'maintenance' });
     return printer;
   }
 
-  updatePrinter(id: number, input: Partial<{ name: string; model: string; inkType: string; maxIdleDays: number; warningDays: number; autoMaintain: boolean }>): PrinterRecord | null {
+  updatePrinter(id: number, input: Partial<{ name: string; model: string; inkType: string; maxIdleDays: number; warningDays: number; autoMaintain: boolean; trustUserPrints: boolean }>): PrinterRecord | null {
     const printer = this.data.printers.find(p => p.id === id);
     if (!printer) return null;
 
@@ -134,6 +143,7 @@ class Store {
     if (input.maxIdleDays !== undefined) printer.maxIdleDays = input.maxIdleDays;
     if (input.warningDays !== undefined) printer.warningDays = input.warningDays;
     if (input.autoMaintain !== undefined) printer.autoMaintain = input.autoMaintain;
+    if (input.trustUserPrints !== undefined) printer.trustUserPrints = input.trustUserPrints;
     printer.updatedAt = new Date().toISOString();
 
     this.save();
@@ -179,13 +189,15 @@ class Store {
       .sort((a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime());
   }
 
-  addEvent(input: { printerId: number; eventType: string; notes?: string }): EventRecord {
+  addEvent(input: { printerId: number; eventType: string; notes?: string; category?: EventCategory }): EventRecord {
+    const eventType = input.eventType as 'print' | 'clean';
     const event: EventRecord = {
       id: this.data.nextEventId++,
       printerId: input.printerId,
-      eventType: input.eventType as 'print' | 'clean',
+      eventType,
       eventDate: new Date().toISOString(),
       notes: input.notes || '',
+      category: input.category || inferCategory({ id: 0, printerId: 0, eventType, eventDate: '', notes: input.notes || '' }),
     };
     this.data.events.push(event);
     this.save();
@@ -215,7 +227,9 @@ class Store {
   getPrintersWithStatus() {
     this.refreshIfStale();
     return this.getPrinters().map(printer => {
-      const lastEvent = this.getLastEvent(printer.id);
+      const events = this.data.events.filter(e => e.printerId === printer.id);
+      const trust = printer.trustUserPrints !== false;
+      const lastEvent = pickStatusEvent(events, trust);
       const { daysRemaining, status } = calculateStatus(lastEvent, printer.maxIdleDays, printer.warningDays);
       return { ...printer, lastEvent, daysRemaining, status };
     });

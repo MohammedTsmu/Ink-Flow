@@ -6,6 +6,17 @@
 
 export type EventType = 'print' | 'clean';
 
+/**
+ * Origin/intent of an event. 'maintenance' events are color test pages we
+ * generated and know exercise every ink channel. 'user' events are real
+ * prints from external apps (or manual clicks) where we cannot know which
+ * channels actually fired. 'clean' = manual head-clean cycle.
+ *
+ * Optional + backward-compatible — events created before this field
+ * existed are migrated based on notes.
+ */
+export type EventCategory = 'maintenance' | 'user' | 'clean';
+
 export type PrinterStatus = 'good' | 'warning' | 'urgent' | 'overdue';
 
 export interface PrinterRecord {
@@ -24,6 +35,17 @@ export interface PrinterRecord {
    */
   autoMaintain: boolean;
   /**
+   * When true (the default), auto-detected prints from external apps
+   * reset the maintenance countdown for this printer — same as v3.1 and
+   * earlier. When false, only events we KNOW exercise every ink channel
+   * (color test pages and manual cleans) reset the countdown; external
+   * prints are still logged but treated as "we don't know which colors
+   * fired". Turn off for printers used mostly for black-and-white text —
+   * that way the color maintenance schedule still runs even if you
+   * print frequently.
+   */
+  trustUserPrints?: boolean;
+  /**
    * Last time the user was alerted about this printer (any non-good
    * status). Used to throttle popups so a printer that stays "overdue"
    * for two weeks doesn't fire 336 popups.
@@ -41,6 +63,13 @@ export interface EventRecord {
   eventType: EventType;
   eventDate: string;
   notes: string;
+  /**
+   * What kind of event this is. Maintenance events are our color test
+   * pages (known to fire every nozzle). User events are external prints
+   * (we cannot know which channels fired). Clean events are manual head
+   * cleaning. Optional for migration; populated from notes when absent.
+   */
+  category?: EventCategory;
 }
 
 export interface MaintenanceWindow {

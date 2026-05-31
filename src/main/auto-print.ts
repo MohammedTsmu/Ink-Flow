@@ -55,6 +55,7 @@ export async function runAutoMaintenancePrints(): Promise<void> {
           printerId: printer.id,
           eventType: 'print',
           notes: 'Auto maintenance print',
+          category: 'maintenance',
         });
         info('auto-print', 'Sent maintenance print', { printer: printer.name });
         if (canNotify && Notification.isSupported()) {

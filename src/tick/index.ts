@@ -82,6 +82,7 @@ async function run(): Promise<void> {
           eventType: 'print',
           eventDate: new Date().toISOString(),
           notes: 'Headless maintenance tick',
+          category: 'maintenance',
         };
         data.events.push(newEvent);
         summary.printed++;

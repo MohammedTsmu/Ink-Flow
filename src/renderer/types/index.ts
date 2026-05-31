@@ -5,6 +5,7 @@ export interface PrinterData {
   maxIdleDays: number;
   warningDays: number;
   autoMaintain?: boolean;
+  trustUserPrints?: boolean;
 }
 
 export interface Printer extends PrinterData {
@@ -12,6 +13,7 @@ export interface Printer extends PrinterData {
   createdAt: string;
   updatedAt: string;
   autoMaintain: boolean;
+  trustUserPrints: boolean;
 }
 
 export interface MaintenanceEvent {

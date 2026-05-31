@@ -70,7 +70,7 @@ export function setupIpcHandlers(): void {
     }
     const success = await sendTestPrint(printerName);
     if (success) {
-      store.addEvent({ printerId, eventType: 'print', notes: 'Manual test print' });
+      store.addEvent({ printerId, eventType: 'print', notes: 'Manual test print', category: 'maintenance' });
     }
     return { success, reason: success ? null : 'print-failed' };
   });

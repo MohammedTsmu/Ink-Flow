@@ -29,6 +29,7 @@ function handlePrintEvent(evt: PrintEvent): void {
         printerId: matched.id,
         eventType: 'print',
         notes: 'Auto-detected print job: ' + evt.documentName,
+        category: 'user',
       });
       info('print-monitor', 'Auto-logged print job', {
         printer: matched.name,
