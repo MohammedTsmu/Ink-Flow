@@ -78,7 +78,7 @@ deploy:
     release: $(APPVEYOR_REPO_TAG_NAME)
     description: 'Built by AppVeyor from commit $(APPVEYOR_REPO_COMMIT).'
     auth_token: $(GH_RELEASE_TOKEN)
-    artifact: /.*\.(exe|dmg|zip|AppImage|deb|blockmap)|^latest.*\.yml$/
+    artifact: /.*\.(exe|dmg|zip|AppImage|deb|blockmap|yml)/
     draft: false
     prerelease: false
     force_update: true
