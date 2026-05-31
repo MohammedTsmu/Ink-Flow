@@ -1,6 +1,8 @@
 # 🖨️ Ink Flow — Printer Maintenance Tracker
 
-**Version 3.0.0** | Windows, macOS, and Linux
+**Version 3.0.1** | Windows, macOS, and Linux
+
+> **Versioning policy:** every commit increments the patch number in `package.json`. Run `npm run bump` (or `npm version patch --no-git-tag-version`) before committing — that way the in-app About panel always identifies exactly which code state is running. Tags (`vX.Y.Z` pushed to GitHub) are reserved for installer releases, not every internal edit.
 
 Ink Flow is a cross-platform desktop app that helps prevent liquid ink printer nozzle clogging by tracking printer usage, sending automatic maintenance prints, detecting external print jobs, and alerting you when printers sit idle too long — **even when the app itself is closed**.
 
