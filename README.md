@@ -277,7 +277,7 @@ Ink Flow supports **Dark** and **Light** themes. Toggle from the top navigation 
 
 ## 📄 License
 
-This project is proprietary software.
+MIT — see [LICENSE](LICENSE). You can use, fork, modify, and redistribute this code freely; the only requirement is to keep the copyright + license notice intact.
 
 ---
 

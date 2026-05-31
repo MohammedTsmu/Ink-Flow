@@ -1,6 +1,6 @@
 {
   "name": "ink-flow",
-  "version": "3.0.8",
+  "version": "3.0.9",
   "description": "Ink Flow - Printer Maintenance Tracker",
   "author": {
     "name": "Mohammed Sattar",
@@ -11,6 +11,7 @@
     "type": "git",
     "url": "https://github.com/MohammedTsmu/Ink-Flow.git"
   },
+  "license": "MIT",
   "main": "dist/main/main.js",
   "scripts": {
     "dev": "concurrently -k \"npm run dev:renderer\" \"npm run dev:main\"",
