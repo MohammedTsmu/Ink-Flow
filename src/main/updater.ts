@@ -102,6 +102,16 @@ export async function checkForUpdatesNow(): Promise<UpdateState> {
 
 export function quitAndInstallNow(): void {
   if (state.status !== 'downloaded') return;
-  // setImmediate so the IPC reply lands before we tear down.
-  setImmediate(() => autoUpdater.quitAndInstall());
+  info('updater', 'Quitting to install update');
+  // setImmediate so the IPC reply lands before we tear down. Pass
+  // (isSilent=false, isForceRunAfter=true) — silent would skip the NSIS
+  // wizard, but we configured oneClick:false so the user sees the install
+  // step; forceRunAfter relaunches Ink Flow when the installer completes.
+  setImmediate(() => {
+    try {
+      autoUpdater.quitAndInstall(false, true);
+    } catch (err) {
+      error('updater', 'quitAndInstall threw', err);
+    }
+  });
 }

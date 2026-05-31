@@ -73,6 +73,21 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
 
   useEffect(() => { loadSettings(); }, []);
 
+  // Poll the auto-updater state every 2 s while the General tab is open so
+  // "Downloading: NN%" actually advances and the "Restart & install" button
+  // appears the moment the download is done. Without this the renderer
+  // only sees the snapshot from the original loadSettings call.
+  useEffect(() => {
+    if (tab !== 'general') return;
+    const interval = setInterval(async () => {
+      try {
+        const fresh = await window.api.getUpdateState();
+        setUpdateState(fresh);
+      } catch { /* main process likely quitting */ }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [tab]);
+
   const loadSettings = async () => {
     setLoading(true);
     try {
@@ -152,7 +167,13 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
       case 'available':     return `Update available: v${s.version}. Downloading…`;
       case 'downloading':   return `Downloading v${s.version}: ${s.percent}%`;
       case 'downloaded':    return `v${s.version} downloaded. Click below to restart and install.`;
-      case 'error':         return `Update error: ${s.message}`;
+      case 'error': {
+        // The raw electron-updater error can be a wall of stack-trace text
+        // (50+ lines). Truncate the in-UI display so it doesn't bury the
+        // rest of the General tab; full text is in diagnostics.log.
+        const first = s.message.split(/\r?\n/)[0].slice(0, 200);
+        return `Update check failed: ${first}`;
+      }
     }
   };
 
@@ -264,7 +285,15 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
 
                   <div className={`p-3 ${tile} border rounded-lg`}>
                     <p className="font-medium text-sm mb-2">Updates</p>
-                    <p className={`text-xs ${subtle} mb-3`}>{updateStateText(updateState)}</p>
+                    <p className={`text-xs ${subtle} mb-3 break-words`}>{updateStateText(updateState)}</p>
+                    {updateState.status === 'downloading' && (
+                      <div className={`h-1.5 ${isDark ? 'bg-gray-700' : 'bg-gray-200'} rounded-full overflow-hidden mb-3`}>
+                        <div
+                          className="h-full bg-blue-500 transition-all duration-200"
+                          style={{ width: `${Math.max(2, updateState.percent)}%` }}
+                        />
+                      </div>
+                    )}
                     <div className="flex gap-2">
                       {updateState.status === 'downloaded' ? (
                         <button
@@ -279,7 +308,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
                           disabled={updateChecking || updateState.status === 'checking' || updateState.status === 'downloading'}
                           className={`flex-1 px-3 py-1.5 ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'} rounded-lg text-sm font-medium transition-colors disabled:opacity-50`}
                         >
-                          {updateChecking ? 'Checking…' : 'Check for updates'}
+                          {updateChecking ? 'Checking…' : updateState.status === 'downloading' ? 'Downloading…' : 'Check for updates'}
                         </button>
                       )}
                     </div>
