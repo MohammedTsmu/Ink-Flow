@@ -1,10 +1,15 @@
 {
   "name": "ink-flow",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "description": "Ink Flow - Printer Maintenance Tracker",
   "author": {
     "name": "Mohammed Sattar",
     "email": "mohammed.sattar038@gmail.com"
+  },
+  "homepage": "https://github.com/MohammedTsmu/Ink-Flow",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MohammedTsmu/Ink-Flow.git"
   },
   "main": "dist/main/main.js",
   "scripts": {
@@ -31,6 +36,7 @@
     "electron": "^33.2.0",
     "electron-builder": "^25.1.0",
     "esbuild": "^0.24.2",
+    "jimp": "^1.6.1",
     "postcss": "^8.4.49",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",

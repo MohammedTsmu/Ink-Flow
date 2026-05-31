@@ -1,25 +1,25 @@
 # AppVeyor cross-platform release pipeline.
 #
-# Used when GitHub Actions is unavailable (e.g. account billing
-# locked). Free for public repos with no additional billing on
-# AppVeyor's side. Builds Win + macOS + Linux in parallel using
-# AppVeyor's three image variants.
+# Used while GitHub Actions is unavailable (account billing locked).
+# Free for public repos with no additional billing on AppVeyor's side.
+# Builds Win + macOS + Linux sequentially using AppVeyor's three image
+# variants.
 #
-# Setup (one-time, by repo owner):
-#   1. Sign up at https://ci.appveyor.com with your GitHub account.
-#   2. New Project → pick MohammedTsmu/Ink-Flow.
-#   3. Under Settings → Environment → Add encrypted variable
-#      GH_RELEASE_TOKEN = <GitHub PAT with `repo` scope> (encrypt via
-#      https://ci.appveyor.com/tools/encrypt).
-#      Or skip the deploy block and download artifacts from AppVeyor
-#      directly.
+# Auto-deploy to GitHub Releases requires ONE one-time setup step:
+#   1. Sign in at https://ci.appveyor.com (already done).
+#   2. Project → Ink-Flow → Settings → Environment → Add variable
+#      Name:  GH_RELEASE_TOKEN
+#      Value: <your GitHub PAT — paste the raw token from github.com/settings/tokens>
+#      Click the lock icon next to the value to encrypt it at rest.
+#   3. Save. Done — every tag push will auto-attach installers.
 #
 # Tag pushes (v*.*.*) trigger automatic GitHub release attach.
-# Any push to main triggers a build but skips deploy.
+# Non-tag pushes build artifacts that can be downloaded from
+# AppVeyor's Artifacts tab on each job.
 
 version: 3.0.{build}
 
-# One job per OS; AppVeyor runs them in parallel.
+# One job per OS; AppVeyor runs them in sequence on the free tier.
 image:
   - Visual Studio 2022          # Windows
   - macos-sonoma                # macOS
@@ -28,7 +28,6 @@ image:
 # Don't waste CI time on docs-only changes.
 skip_commits:
   files:
-    - 'README.md'
     - '.gitignore'
     - 'LICENSE'
 
@@ -67,18 +66,17 @@ artifacts:
   - path: release/latest*.yml
     name: update-manifest
 
-# Attach to the GitHub Release matching the tag.
-# Add GH_RELEASE_TOKEN as an encrypted env var via the AppVeyor UI
-# (https://ci.appveyor.com/tools/encrypt) and uncomment this block.
-#
-# deploy:
-#   - provider: GitHub
-#     release: $(APPVEYOR_REPO_TAG_NAME)
-#     auth_token:
-#       secure: <PASTE_ENCRYPTED_VALUE_HERE>
-#     artifact: /.*\.(exe|dmg|zip|AppImage|deb)/
-#     draft: false
-#     prerelease: false
-#     force_update: true
-#     on:
-#       APPVEYOR_REPO_TAG: true
+# Auto-attach to the GitHub Release matching the tag.
+# Reads GH_RELEASE_TOKEN from environment variables — set this once in
+# the AppVeyor project Settings (see header comment).
+deploy:
+  - provider: GitHub
+    release: $(APPVEYOR_REPO_TAG_NAME)
+    description: 'Built by AppVeyor from commit $(APPVEYOR_REPO_COMMIT).'
+    auth_token: $(GH_RELEASE_TOKEN)
+    artifact: /.*\.(exe|dmg|zip|AppImage|deb)/
+    draft: false
+    prerelease: false
+    force_update: true
+    on:
+      APPVEYOR_REPO_TAG: true
