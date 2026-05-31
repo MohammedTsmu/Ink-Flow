@@ -1,6 +1,6 @@
 {
   "name": "ink-flow",
-  "version": "3.0.7",
+  "version": "3.0.8",
   "description": "Ink Flow - Printer Maintenance Tracker",
   "author": {
     "name": "Mohammed Sattar",
@@ -68,7 +68,8 @@
           ]
         }
       ],
-      "icon": "assets/icon.png"
+      "icon": "assets/icon.png",
+      "artifactName": "ink-flow-${version}-win-${arch}-setup.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -96,7 +97,8 @@
       "icon": "assets/icon.png",
       "hardenedRuntime": false,
       "gatekeeperAssess": false,
-      "identity": null
+      "identity": null,
+      "artifactName": "ink-flow-${version}-mac-${arch}.${ext}"
     },
     "linux": {
       "target": [
@@ -116,7 +118,8 @@
       "category": "Utility",
       "icon": "assets/icon.png",
       "synopsis": "Printer Maintenance Tracker",
-      "description": "Track inkjet printer usage and prevent nozzle clogging with scheduled maintenance prints."
+      "description": "Track inkjet printer usage and prevent nozzle clogging with scheduled maintenance prints.",
+      "artifactName": "ink-flow-${version}-linux-${arch}.${ext}"
     }
   },
   "dependencies": {
