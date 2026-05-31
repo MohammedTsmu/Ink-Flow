@@ -69,12 +69,16 @@ artifacts:
 # Auto-attach to the GitHub Release matching the tag.
 # Reads GH_RELEASE_TOKEN from environment variables — set this once in
 # the AppVeyor project Settings (see header comment).
+#
+# The artifact regex includes latest*.yml so electron-updater can find
+# its version manifests on the release page — without those the auto-
+# updater 404s at runtime trying to fetch v<tag>/latest.yml.
 deploy:
   - provider: GitHub
     release: $(APPVEYOR_REPO_TAG_NAME)
     description: 'Built by AppVeyor from commit $(APPVEYOR_REPO_COMMIT).'
     auth_token: $(GH_RELEASE_TOKEN)
-    artifact: /.*\.(exe|dmg|zip|AppImage|deb)/
+    artifact: /.*\.(exe|dmg|zip|AppImage|deb|blockmap)|^latest.*\.yml$/
     draft: false
     prerelease: false
     force_update: true

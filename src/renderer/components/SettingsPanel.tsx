@@ -65,6 +65,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [schedule, setSchedule] = useState<ScheduleStatus | null>(null);
   const [schedulePending, setSchedulePending] = useState(false);
   const [scheduleResult, setScheduleResult] = useState<ScheduleResult | null>(null);
+  const [lastScheduleOp, setLastScheduleOp] = useState<'install' | 'uninstall' | null>(null);
   const [maintenanceWindow, setMaintenanceWindow] = useState<{ startHour: number; endHour: number } | null>(null);
   const [tickInterval, setTickInterval] = useState<number>(6 * 60 * 60);
   const [updateState, setUpdateState] = useState<UpdateState>({ status: 'idle' });
@@ -174,8 +175,9 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   const handleScheduleToggle = async () => {
     setSchedulePending(true);
     setScheduleResult(null);
+    const wantOn = !schedule?.installed;
+    setLastScheduleOp(wantOn ? 'install' : 'uninstall');
     try {
-      const wantOn = !schedule?.installed;
       const result = wantOn
         ? await window.api.installSchedule()
         : await window.api.uninstallSchedule();
@@ -184,7 +186,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
       setSchedule(refreshed);
     } finally {
       setSchedulePending(false);
-      setTimeout(() => setScheduleResult(null), 6000);
+      setTimeout(() => { setScheduleResult(null); setLastScheduleOp(null); }, 8000);
     }
   };
 
@@ -357,8 +359,8 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
                     {scheduleResult && (
                       <p className={`text-xs mt-2 ${scheduleResult.success ? 'text-green-400' : 'text-red-400'}`}>
                         {scheduleResult.success
-                          ? (schedule?.installed ? 'Background tick installed.' : 'Background tick removed.')
-                          : scheduleResult.reason}
+                          ? (lastScheduleOp === 'install' ? 'Background tick installed.' : 'Background tick removed.')
+                          : (lastScheduleOp === 'install' ? `Couldn't install: ${scheduleResult.reason}` : scheduleResult.reason)}
                       </p>
                     )}
                   </div>

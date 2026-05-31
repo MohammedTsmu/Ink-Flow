@@ -17,28 +17,46 @@ import {
  * own env support is awkward to drive from PowerShell).
  */
 export class WindowsScheduleProvider implements ScheduleProvider {
-  install(config: ScheduleConfig): Promise<ScheduleResult> {
+  async install(config: ScheduleConfig): Promise<ScheduleResult> {
     const intervalMinutes = Math.max(Math.round(config.intervalSeconds / 60), 1);
     const cmdLine = buildCmdLine(config);
 
+    // Wrapped in try/catch so Register-ScheduledTask failures surface
+    // through stdout rather than being swallowed by the trailing `Write-Output 'OK'`.
+    // LogonType is Interactive (not S4U) — S4U requires policy that many
+    // home Windows installs don't have, and was the root cause of silent
+    // install failures in 3.1.x.
     const ps = [
-      `$action = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument '/c ${escapePsSingle(cmdLine)}';`,
-      `$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(2) -RepetitionInterval (New-TimeSpan -Minutes ${intervalMinutes});`,
-      `$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew;`,
-      `$principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\\$env:USERNAME" -LogonType S4U -RunLevel Limited;`,
-      `Register-ScheduledTask -TaskName '${escapePsSingle(config.label)}' -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force | Out-Null;`,
-      `Write-Output 'OK'`,
+      'try {',
+      `  $action = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument '/c ${escapePsSingle(cmdLine)}';`,
+      `  $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(2) -RepetitionInterval (New-TimeSpan -Minutes ${intervalMinutes});`,
+      `  $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew;`,
+      `  $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\\$env:USERNAME" -LogonType Interactive -RunLevel Limited;`,
+      `  Register-ScheduledTask -TaskName '${escapePsSingle(config.label)}' -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force -ErrorAction Stop | Out-Null;`,
+      `  Write-Output 'OK';`,
+      '} catch {',
+      "  Write-Output ('ERR: ' + $_.Exception.Message)",
+      '}',
     ].join(' ');
 
-    return runPowerShell(ps).then(
-      ({ stdout }) => stdout.includes('OK')
-        ? { success: true }
-        : { success: false, reason: 'PowerShell did not confirm installation' },
-      (err) => {
-        warn('schedule-windows', 'install failed', err);
-        return { success: false, reason: String(err) };
-      },
-    );
+    try {
+      const { stdout } = await runPowerShell(ps);
+      if (!stdout.includes('OK')) {
+        const reason = stdout.replace(/^.*ERR:\s*/m, '').trim() || 'PowerShell did not confirm installation';
+        warn('schedule-windows', 'install reported failure', { stdout });
+        return { success: false, reason };
+      }
+      // Verify by querying — covers the case where Register said OK but the
+      // task isn't actually queryable (rare permission edge case).
+      const verify = await this.status(config.label);
+      if (!verify.installed) {
+        return { success: false, reason: 'Task registered but post-install query did not find it. Try running Ink Flow as administrator.' };
+      }
+      return { success: true };
+    } catch (err) {
+      warn('schedule-windows', 'install threw', err);
+      return { success: false, reason: String(err) };
+    }
   }
 
   uninstall(label: string): Promise<ScheduleResult> {
