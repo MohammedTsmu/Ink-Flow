@@ -1,6 +1,6 @@
 {
   "name": "ink-flow",
-  "version": "3.0.13",
+  "version": "3.0.14",
   "description": "Ink Flow - Printer Maintenance Tracker",
   "author": {
     "name": "Mohammed Sattar",
@@ -17,9 +17,10 @@
     "dev": "concurrently -k \"npm run dev:renderer\" \"npm run dev:main\"",
     "dev:renderer": "vite --config vite.config.ts",
     "dev:main": "wait-on http-get://localhost:5173 && tsc -p tsconfig.json && cross-env NODE_ENV=development electron .",
-    "build": "npm run build:main && npm run build:tick && vite build --config vite.config.ts",
+    "build": "npm run build:main && npm run typecheck:renderer && npm run build:tick && vite build --config vite.config.ts",
     "build:main": "tsc -p tsconfig.json",
     "build:tick": "esbuild src/tick/index.ts --bundle --platform=node --target=node18 --outfile=dist/tick/index.js --external:electron",
+    "typecheck:renderer": "tsc --noEmit -p tsconfig.renderer.json",
     "start": "electron .",
     "test": "vitest run",
     "test:watch": "vitest",
