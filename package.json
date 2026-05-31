@@ -1,6 +1,6 @@
 {
   "name": "ink-flow",
-  "version": "3.0.14",
+  "version": "3.0.15",
   "description": "Ink Flow - Printer Maintenance Tracker",
   "author": {
     "name": "Mohammed Sattar",
@@ -60,6 +60,14 @@
     ],
     "asarUnpack": [
       "dist/tick/**/*"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "MohammedTsmu",
+        "repo": "Ink-Flow",
+        "releaseType": "release"
+      }
     ],
     "win": {
       "target": [
@@ -126,6 +134,7 @@
   },
   "dependencies": {
     "@types/proper-lockfile": "^4.1.4",
+    "electron-updater": "^6.8.3",
     "proper-lockfile": "^4.1.2"
   }
 }

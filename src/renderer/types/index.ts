@@ -127,6 +127,15 @@ export interface TickStats {
   uniquePrintersServed: number;
 }
 
+export type UpdateState =
+  | { status: 'idle' }
+  | { status: 'checking' }
+  | { status: 'not-available'; lastChecked: string }
+  | { status: 'available'; version: string }
+  | { status: 'downloading'; version: string; percent: number }
+  | { status: 'downloaded'; version: string }
+  | { status: 'error'; message: string };
+
 declare global {
   interface Window {
     api: {
@@ -166,6 +175,10 @@ declare global {
       markSummarySeen: () => Promise<boolean>;
       // 3.0.12: aggregated tick stats
       getTickStats: () => Promise<TickStats>;
+      // 3.0.15: auto-updater
+      getUpdateState: () => Promise<UpdateState>;
+      checkForUpdates: () => Promise<UpdateState>;
+      quitAndInstallUpdate: () => Promise<boolean>;
       // Alert listener
       onPrinterAlerts: (callback: (alerts: AlertItem[]) => void) => () => void;
     };

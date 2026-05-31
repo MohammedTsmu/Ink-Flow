@@ -40,6 +40,10 @@ contextBridge.exposeInMainWorld('api', {
   markSummarySeen: () => ipcRenderer.invoke('mark-summary-seen'),
   // Aggregated tick stats for Statistics panel (3.0.12+)
   getTickStats: () => ipcRenderer.invoke('get-tick-stats'),
+  // Auto-updater (3.0.15+)
+  getUpdateState: () => ipcRenderer.invoke('get-update-state'),
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  quitAndInstallUpdate: () => ipcRenderer.invoke('quit-and-install-update'),
   // Alert listener
   onPrinterAlerts: (callback: (alerts: Array<{ name: string; status: string; level: string; message: string }>) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, alerts: Array<{ name: string; status: string; level: string; message: string }>) => callback(alerts);

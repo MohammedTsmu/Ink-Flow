@@ -8,6 +8,7 @@ import { startPrintMonitor, stopPrintMonitor } from './print-monitor';
 import { setMainWindow } from './window-ref';
 import { initLogger, info, error, warn } from '../core/log';
 import { getAdapter } from '../core/printers';
+import { initAutoUpdater } from './updater';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -97,6 +98,7 @@ app.whenReady().then(async () => {
   tray = createTray(mainWindow!);
   startNotificationScheduler();
   startPrintMonitor();
+  initAutoUpdater();
 
   // Verify auto-detection prerequisites — surfaces the "log disabled"
   // issue immediately instead of silently failing for weeks.

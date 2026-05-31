@@ -10,6 +10,7 @@ import { getAdapter } from '../core/printers';
 import { getScheduleStatus, installSchedule, uninstallSchedule, refreshScheduleIfInstalled } from './schedule';
 import { buildTickSummary, summaryWorthShowing } from '../core/tick-summary';
 import { buildTickStats } from '../core/tick-stats';
+import { getUpdateState, checkForUpdatesNow, quitAndInstallNow } from './updater';
 
 export function setupIpcHandlers(): void {
   const store = getStore();
@@ -111,6 +112,11 @@ export function setupIpcHandlers(): void {
 
   // All-time tick stats for the Statistics panel (3.0.12+)
   ipcMain.handle('get-tick-stats', () => buildTickStats(readRecentEntries(5000)));
+
+  // Auto-updater (3.0.15+)
+  ipcMain.handle('get-update-state', () => getUpdateState());
+  ipcMain.handle('check-for-updates', () => checkForUpdatesNow());
+  ipcMain.handle('quit-and-install-update', () => { quitAndInstallNow(); return true; });
 
   // Phase 3: Backup import
   ipcMain.handle('import-backup', async () => {

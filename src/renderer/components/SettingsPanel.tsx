@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../ThemeContext';
-import { DetectionStatus, DetectionFixResult, ScheduleStatus, ScheduleResult } from '../types';
+import { DetectionStatus, DetectionFixResult, ScheduleStatus, ScheduleResult, UpdateState } from '../types';
 import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface SettingsPanelProps {
@@ -67,6 +67,8 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [scheduleResult, setScheduleResult] = useState<ScheduleResult | null>(null);
   const [maintenanceWindow, setMaintenanceWindow] = useState<{ startHour: number; endHour: number } | null>(null);
   const [tickInterval, setTickInterval] = useState<number>(6 * 60 * 60);
+  const [updateState, setUpdateState] = useState<UpdateState>({ status: 'idle' });
+  const [updateChecking, setUpdateChecking] = useState(false);
 
   useEffect(() => { loadSettings(); }, []);
 
@@ -87,6 +89,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
       setAppVersion(version);
       setDetection(detectionStatus);
       setSchedule(scheduleStatus);
+      try { setUpdateState(await window.api.getUpdateState()); } catch { /* ignore */ }
     } finally {
       setLoading(false);
     }
@@ -125,6 +128,32 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
     { value: 24 * 60 * 60,      label: 'Once a day' },
     { value: 7 * 24 * 60 * 60,  label: 'Once a week' },
   ];
+
+  const handleCheckUpdates = async () => {
+    setUpdateChecking(true);
+    try {
+      const result = await window.api.checkForUpdates();
+      setUpdateState(result);
+    } finally {
+      setUpdateChecking(false);
+    }
+  };
+
+  const handleInstallUpdate = async () => {
+    await window.api.quitAndInstallUpdate();
+  };
+
+  const updateStateText = (s: UpdateState): string => {
+    switch (s.status) {
+      case 'idle':          return 'No check performed yet this session.';
+      case 'checking':      return 'Checking for updates…';
+      case 'not-available': return `You’re on the latest version. (last checked ${new Date(s.lastChecked).toLocaleTimeString()})`;
+      case 'available':     return `Update available: v${s.version}. Downloading…`;
+      case 'downloading':   return `Downloading v${s.version}: ${s.percent}%`;
+      case 'downloaded':    return `v${s.version} downloaded. Click below to restart and install.`;
+      case 'error':         return `Update error: ${s.message}`;
+    }
+  };
 
   const handleEnableDetection = async () => {
     setFixing(true);
@@ -230,6 +259,30 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
                       <span className={toggleDotClass(autoStart)} />
                     </button>
                   </div>
+
+                  <div className={`p-3 ${tile} border rounded-lg`}>
+                    <p className="font-medium text-sm mb-2">Updates</p>
+                    <p className={`text-xs ${subtle} mb-3`}>{updateStateText(updateState)}</p>
+                    <div className="flex gap-2">
+                      {updateState.status === 'downloaded' ? (
+                        <button
+                          onClick={handleInstallUpdate}
+                          className="flex-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+                        >
+                          Restart &amp; install v{updateState.version}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleCheckUpdates}
+                          disabled={updateChecking || updateState.status === 'checking' || updateState.status === 'downloading'}
+                          className={`flex-1 px-3 py-1.5 ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'} rounded-lg text-sm font-medium transition-colors disabled:opacity-50`}
+                        >
+                          {updateChecking ? 'Checking…' : 'Check for updates'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
                   <div className={`p-3 ${tile} border rounded-lg`}>
                     <p className="font-medium text-sm">About</p>
                     <p className={`text-xs ${subtle} mt-1`}>Ink Flow v{appVersion} — Printer Maintenance Tracker</p>
