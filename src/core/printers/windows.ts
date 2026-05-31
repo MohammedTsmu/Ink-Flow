@@ -12,6 +12,7 @@ import {
 } from './types';
 import { error, info, warn } from '../log';
 import { probeTcp, extractIpv4, RAW_PRINT_PORT } from '../net';
+import { generateColorTestPng } from '../color-test-image';
 
 /**
  * Windows implementation of PrinterAdapter.
@@ -113,30 +114,45 @@ export class WindowsAdapter implements PrinterAdapter {
 
   sendTestPrint(name: string): Promise<boolean> {
     return new Promise((resolve) => {
-      const now = new Date();
-      const dateStr = now.toISOString().slice(0, 16).replace('T', ' ');
-      const content = [
-        'Ink Flow - Maintenance Print',
-        'Date: ' + dateStr,
-        'Printer: ' + name,
-        '',
-        'This page was printed automatically to keep your print head healthy.',
-      ].join('\r\n');
-
-      const tempFile = path.join(os.tmpdir(), 'inkflow-test-' + Date.now() + '.txt');
-
+      const imagePath = path.join(os.tmpdir(), 'inkflow-color-' + Date.now() + '.png');
       try {
-        fs.writeFileSync(tempFile, content, 'utf-8');
-      } catch {
+        fs.writeFileSync(imagePath, generateColorTestPng());
+      } catch (err) {
+        error('windows-adapter', 'Could not write color-test image', err);
         resolve(false);
         return;
       }
 
-      // notepad /p prints silently; no shell, no AV false-positive.
-      execFile('notepad.exe', ['/p', tempFile], { timeout: 30000 }, (error) => {
-        try { fs.unlinkSync(tempFile); } catch { /* ignore */ }
-        resolve(!error);
-      });
+      // GDI+ via PowerShell so the page actually rasterises through the
+      // driver and exercises every ink channel — notepad /p only laid
+      // down black. Single quotes around printer name + path are
+      // escaped to survive names like "Brother's Printer".
+      const safeName = name.replace(/'/g, "''");
+      const safePath = imagePath.replace(/'/g, "''");
+      const script = [
+        'Add-Type -AssemblyName System.Drawing;',
+        `$img = [System.Drawing.Image]::FromFile('${safePath}');`,
+        '$doc = New-Object System.Drawing.Printing.PrintDocument;',
+        `$doc.PrinterSettings.PrinterName = '${safeName}';`,
+        '$doc.DefaultPageSettings.Margins = New-Object System.Drawing.Printing.Margins 50,50,50,50;',
+        '$doc.add_PrintPage({ param($s,$e); $bounds = $e.MarginBounds; $e.Graphics.DrawImage($img, $bounds); });',
+        'try { $doc.Print() } finally { $img.Dispose() }',
+      ].join(' ');
+
+      execFile(
+        'powershell.exe',
+        ['-NoProfile', '-NonInteractive', '-Command', script],
+        { timeout: 30_000 },
+        (err) => {
+          try { fs.unlinkSync(imagePath); } catch { /* ignore */ }
+          if (err) {
+            error('windows-adapter', 'PowerShell test print failed', err);
+            resolve(false);
+          } else {
+            resolve(true);
+          }
+        },
+      );
     });
   }
 

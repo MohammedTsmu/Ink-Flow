@@ -13,6 +13,7 @@ import {
 } from './types';
 import { error, warn, info } from '../log';
 import { probeTcp, extractIpv4, RAW_PRINT_PORT } from '../net';
+import { generateColorTestPng } from '../color-test-image';
 
 /**
  * CUPS adapter — covers both macOS and Linux. CUPS is the standard
@@ -94,27 +95,19 @@ export class CupsAdapter implements PrinterAdapter {
 
   sendTestPrint(name: string): Promise<boolean> {
     return new Promise((resolve) => {
-      const now = new Date();
-      const dateStr = now.toISOString().slice(0, 16).replace('T', ' ');
-      const content = [
-        'Ink Flow - Maintenance Print',
-        'Date: ' + dateStr,
-        'Printer: ' + name,
-        '',
-        'This page was printed automatically to keep your print head healthy.',
-      ].join('\n') + '\n';
-
-      const tempFile = path.join(os.tmpdir(), 'inkflow-test-' + Date.now() + '.txt');
+      const imagePath = path.join(os.tmpdir(), 'inkflow-color-' + Date.now() + '.png');
       try {
-        fs.writeFileSync(tempFile, content, 'utf-8');
+        fs.writeFileSync(imagePath, generateColorTestPng());
       } catch (err) {
-        error('cups-adapter', 'Could not write temp file for test print', err);
+        error('cups-adapter', 'Could not write color-test image', err);
         resolve(false);
         return;
       }
 
-      execFile('lp', ['-d', name, tempFile], { timeout: 30_000 }, (err) => {
-        try { fs.unlinkSync(tempFile); } catch { /* ignore */ }
+      // CUPS includes a PNG filter by default — `lp` rasterises through
+      // the driver and exercises every ink channel.
+      execFile('lp', ['-d', name, imagePath], { timeout: 30_000 }, (err) => {
+        try { fs.unlinkSync(imagePath); } catch { /* ignore */ }
         if (err) {
           error('cups-adapter', 'lp failed', err);
           resolve(false);
