@@ -1,6 +1,6 @@
 {
   "name": "ink-flow",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "description": "Ink Flow - Printer Maintenance Tracker",
   "author": {
     "name": "Mohammed Sattar",
@@ -55,7 +55,12 @@
     ],
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "assets/icon.png"
     },
@@ -66,8 +71,20 @@
     },
     "mac": {
       "target": [
-        { "target": "dmg", "arch": ["x64", "arm64"] },
-        { "target": "zip", "arch": ["x64", "arm64"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ],
       "category": "public.app-category.utilities",
       "icon": "assets/icon.png",
@@ -77,8 +94,18 @@
     },
     "linux": {
       "target": [
-        { "target": "AppImage", "arch": ["x64"] },
-        { "target": "deb", "arch": ["x64"] }
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "category": "Utility",
       "icon": "assets/icon.png",
