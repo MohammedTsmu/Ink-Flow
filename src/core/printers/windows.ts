@@ -111,7 +111,10 @@ export class WindowsAdapter implements PrinterAdapter {
 
   sendTestPrint(name: string): Promise<boolean> {
     return new Promise((resolve) => {
-      const imagePath = path.join(os.tmpdir(), 'inkflow-color-' + Date.now() + '.png');
+      const ts = Date.now();
+      const imagePath = path.join(os.tmpdir(), `inkflow-color-${ts}.png`);
+      const scriptPath = path.join(os.tmpdir(), `inkflow-print-${ts}.ps1`);
+
       try {
         fs.writeFileSync(imagePath, generateColorTestPng());
       } catch (err) {
@@ -120,30 +123,54 @@ export class WindowsAdapter implements PrinterAdapter {
         return;
       }
 
-      // GDI+ via PowerShell so the page actually rasterises through the
-      // driver and exercises every ink channel — notepad /p only laid
-      // down black. Single quotes around printer name + path are
-      // escaped to survive names like "Brother's Printer".
+      // Why a .ps1 file with proper multi-line and no -NonInteractive:
+      // GDI+ PrintDocument needs a window-station / desktop context to
+      // get a device-context handle for the printer. `-NonInteractive`
+      // strips that and Print() fails with "The handle is invalid".
+      // Also -Command with ; separators tended to drop the add_PrintPage
+      // binding before Print() ran. -File with a real script is reliable.
       const safeName = name.replace(/'/g, "''");
       const safePath = imagePath.replace(/'/g, "''");
-      const script = [
-        'Add-Type -AssemblyName System.Drawing;',
-        `$img = [System.Drawing.Image]::FromFile('${safePath}');`,
-        '$doc = New-Object System.Drawing.Printing.PrintDocument;',
-        `$doc.PrinterSettings.PrinterName = '${safeName}';`,
-        '$doc.DefaultPageSettings.Margins = New-Object System.Drawing.Printing.Margins 50,50,50,50;',
-        '$doc.add_PrintPage({ param($s,$e); $bounds = $e.MarginBounds; $e.Graphics.DrawImage($img, $bounds); });',
-        'try { $doc.Print() } finally { $img.Dispose() }',
-      ].join(' ');
+      const scriptBody = `$ErrorActionPreference = 'Stop'
+try {
+  Add-Type -AssemblyName System.Drawing
+  $img = [System.Drawing.Image]::FromFile('${safePath}')
+  $doc = New-Object System.Drawing.Printing.PrintDocument
+  $doc.PrinterSettings.PrinterName = '${safeName}'
+  $doc.DefaultPageSettings.Margins = New-Object System.Drawing.Printing.Margins(50, 50, 50, 50)
+  $doc.add_PrintPage({
+    param($s, $e)
+    $e.Graphics.DrawImage($img, $e.MarginBounds)
+  })
+  try { $doc.Print() } finally { $img.Dispose() }
+  Write-Output 'OK'
+} catch {
+  [Console]::Error.WriteLine($_.Exception.Message)
+  exit 1
+}
+`;
+
+      try {
+        fs.writeFileSync(scriptPath, scriptBody, 'utf-8');
+      } catch (err) {
+        try { fs.unlinkSync(imagePath); } catch { /* ignore */ }
+        error('windows-adapter', 'Could not write print script', err);
+        resolve(false);
+        return;
+      }
 
       execFile(
         'powershell.exe',
-        ['-NoProfile', '-NonInteractive', '-Command', script],
+        ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath],
         { timeout: 30_000 },
-        (err) => {
+        (err, _stdout, stderr) => {
           try { fs.unlinkSync(imagePath); } catch { /* ignore */ }
+          try { fs.unlinkSync(scriptPath); } catch { /* ignore */ }
           if (err) {
-            error('windows-adapter', 'PowerShell test print failed', err);
+            error('windows-adapter', 'PowerShell test print failed', {
+              code: err.code,
+              stderr: String(stderr || '').slice(0, 500),
+            });
             resolve(false);
           } else {
             resolve(true);
