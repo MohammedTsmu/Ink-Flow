@@ -1,6 +1,6 @@
 {
   "name": "ink-flow",
-  "version": "3.0.3",
+  "version": "3.0.4",
   "description": "Ink Flow - Printer Maintenance Tracker",
   "author": {
     "name": "Mohammed Sattar",
@@ -22,7 +22,7 @@
     "start": "electron .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "package": "npm run build && electron-builder",
+    "package": "npm run build && electron-builder --publish never",
     "bump": "npm version patch --no-git-tag-version"
   },
   "devDependencies": {

@@ -65,28 +65,31 @@ describe('withStoreLock', () => {
     expect(result).toBe(42);
   });
 
-  it('serialises concurrent callers', async () => {
+  it('serialises concurrent callers (no interleave, either order)', async () => {
     writeStoreFileAtomic(storePath, emptyStore());
     const events: string[] = [];
 
-    const a = withStoreLock(storePath, async () => {
-      events.push('a:start');
-      await new Promise(r => setTimeout(r, 100));
-      events.push('a:end');
-    });
-    const b = withStoreLock(storePath, () => {
-      events.push('b:start');
-      events.push('b:end');
-    });
+    const op = (name: string) => async () => {
+      events.push(`${name}:start`);
+      await new Promise(r => setTimeout(r, 50));
+      events.push(`${name}:end`);
+    };
 
+    // Both calls start before either acquires the lock. proper-lockfile
+    // does not guarantee FIFO across pending acquisitions — on macOS we've
+    // observed the second caller getting the lock first. So we don't
+    // assert an order; we only assert *exclusivity* (no interleaving).
+    const a = withStoreLock(storePath, op('a'));
+    const b = withStoreLock(storePath, op('b'));
     await Promise.all([a, b]);
 
-    // a started first and must finish before b starts (lock is exclusive)
-    const aStart = events.indexOf('a:start');
-    const aEnd = events.indexOf('a:end');
-    const bStart = events.indexOf('b:start');
-    expect(aStart).toBeLessThan(aEnd);
-    expect(aEnd).toBeLessThan(bStart);
+    expect(events).toHaveLength(4);
+    const seq = events.join(' ');
+    const validOrders = new Set([
+      'a:start a:end b:start b:end',
+      'b:start b:end a:start a:end',
+    ]);
+    expect(validOrders.has(seq)).toBe(true);
   });
 
   it('releases the lock even when the callback throws', async () => {
