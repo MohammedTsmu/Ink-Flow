@@ -1,4 +1,4 @@
-import { exec, execFile } from 'child_process';
+import { exec, execFile, spawn, ChildProcessWithoutNullStreams } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -32,9 +32,6 @@ import { generateColorTestPng } from '../color-test-image';
  */
 export class WindowsAdapter implements PrinterAdapter {
   readonly platform = 'win32' as const;
-
-  /** Tracks whether subscribers are seeing all events since this timestamp. */
-  private lastEventCheckTime = new Date();
 
   listSystem(): Promise<SystemPrinter[]> {
     return new Promise((resolve) => {
@@ -157,13 +154,77 @@ export class WindowsAdapter implements PrinterAdapter {
   }
 
   subscribeToPrintEvents(callback: (event: PrintEvent) => void): () => void {
-    // Initial check 30s after subscribe, then every 5 minutes.
-    const initialTimeout = setTimeout(() => { this.pollEvents(callback); }, 30_000);
-    const interval = setInterval(() => { this.pollEvents(callback); }, 5 * 60 * 1000);
+    // Real-time subscription via a long-lived PowerShell process running
+    // a .NET EventLogWatcher on the PrintService/Operational log. Events
+    // are pushed as JSONL on stdout. We restart on crash with a 5 s
+    // backoff so transient PowerShell failures don't kill detection.
+    let stopped = false;
+    let proc: ChildProcessWithoutNullStreams | null = null;
+    let restartTimer: NodeJS.Timeout | null = null;
+    let stdoutBuffer = '';
+
+    const scriptPath = path.join(os.tmpdir(), 'inkflow-print-watcher.ps1');
+    try {
+      fs.writeFileSync(scriptPath, WATCHER_PS_SCRIPT, 'utf-8');
+    } catch (err) {
+      error('windows-adapter', 'Failed to stage print-watcher PS script', err);
+      return () => { /* nothing to clean up */ };
+    }
+
+    const onLine = (line: string) => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+      try {
+        const obj = JSON.parse(trimmed) as { timeCreated?: string; printerName?: string; documentName?: string };
+        if (!obj.printerName) return;
+        callback({
+          timeCreated: obj.timeCreated || new Date().toISOString(),
+          printerName: String(obj.printerName),
+          documentName: String(obj.documentName || 'Unknown document'),
+        });
+      } catch {
+        // Non-JSON output (status / error from PS) — ignored on purpose.
+      }
+    };
+
+    const start = () => {
+      if (stopped) return;
+      try {
+        proc = spawn('powershell.exe', [
+          '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden',
+          '-ExecutionPolicy', 'Bypass', '-File', scriptPath,
+        ], { stdio: ['ignore', 'pipe', 'pipe'] });
+      } catch (err) {
+        error('windows-adapter', 'Could not spawn print-watcher', err);
+        return;
+      }
+
+      proc.stdout.setEncoding('utf-8');
+      proc.stdout.on('data', (chunk: string) => {
+        stdoutBuffer += chunk;
+        let nl: number;
+        while ((nl = stdoutBuffer.indexOf('\n')) >= 0) {
+          const line = stdoutBuffer.slice(0, nl);
+          stdoutBuffer = stdoutBuffer.slice(nl + 1);
+          onLine(line);
+        }
+      });
+      proc.on('exit', (code) => {
+        if (stopped) return;
+        warn('windows-adapter', 'print-watcher exited; restarting', { code });
+        restartTimer = setTimeout(start, 5000);
+      });
+
+      info('windows-adapter', 'print-watcher running (real-time)');
+    };
+
+    start();
 
     return () => {
-      clearTimeout(initialTimeout);
-      clearInterval(interval);
+      stopped = true;
+      if (restartTimer) clearTimeout(restartTimer);
+      try { proc?.kill(); } catch { /* ignore */ }
+      try { fs.unlinkSync(scriptPath); } catch { /* ignore */ }
     };
   }
 
@@ -258,63 +319,40 @@ export class WindowsAdapter implements PrinterAdapter {
     });
   }
 
-  private async pollEvents(callback: (event: PrintEvent) => void): Promise<void> {
+}
+
+/**
+ * PowerShell script staged to a temp .ps1 file and run with `-File`.
+ * Uses .NET's EventLogWatcher so we get a callback fired on every new
+ * Event ID 307 in real time. Each event is serialised to compact JSON
+ * on a single stdout line; the Node parent reads and dispatches.
+ */
+const WATCHER_PS_SCRIPT = `
+$ErrorActionPreference = 'Stop'
+try {
+  $logName = 'Microsoft-Windows-PrintService/Operational'
+  $xpath   = '*[System[EventID=307]]'
+  $query   = New-Object System.Diagnostics.Eventing.Reader.EventLogQuery($logName, [System.Diagnostics.Eventing.Reader.PathType]::LogName, $xpath)
+  $watcher = New-Object System.Diagnostics.Eventing.Reader.EventLogWatcher($query)
+  $null = Register-ObjectEvent -InputObject $watcher -EventName 'EventRecordWritten' -Action {
     try {
-      const now = new Date();
-      const sinceMs = now.getTime() - this.lastEventCheckTime.getTime();
-      const sinceSeconds = Math.max(Math.ceil(sinceMs / 1000), 60);
-      const events = await queryWindowsPrintLog(sinceSeconds);
-      this.lastEventCheckTime = now;
-      for (const evt of events) callback(evt);
-    } catch (err) {
-      error('windows-adapter', 'pollEvents failed', err);
+      $rec = $EventArgs.EventRecord
+      if ($null -eq $rec) { return }
+      $obj = @{
+        timeCreated  = $rec.TimeCreated.ToString('o')
+        printerName  = $rec.Properties[4].Value
+        documentName = $rec.Properties[1].Value
+      }
+      [Console]::Out.WriteLine((ConvertTo-Json -Compress $obj))
+      [Console]::Out.Flush()
+    } catch {
+      [Console]::Error.WriteLine("watcher-callback: $_")
     }
   }
+  $watcher.Enabled = $true
+  while ($true) { Start-Sleep -Seconds 3600 }
+} catch {
+  [Console]::Error.WriteLine("watcher-startup: $_")
+  exit 1
 }
-
-function queryWindowsPrintLog(sinceSeconds: number): Promise<PrintEvent[]> {
-  return new Promise((resolve) => {
-    // Query Event ID 307 (Document Printed) from the PrintService Operational log
-    // Properties: [0]=JobId, [1]=DocumentName, [2]=User, [3]=Machine, [4]=PrinterName
-    const ps = [
-      'try {',
-      '  $events = Get-WinEvent -LogName "Microsoft-Windows-PrintService/Operational"',
-      '    -FilterXPath "*[System[EventID=307 and TimeCreated[timediff(@SystemTime) <= ' + (sinceSeconds * 1000) + ']]]"',
-      '    -MaxEvents 50 -ErrorAction Stop',
-      '  $results = $events | ForEach-Object {',
-      '    [PSCustomObject]@{',
-      '      TimeCreated = $_.TimeCreated.ToString("o")',
-      '      PrinterName = $_.Properties[4].Value',
-      '      DocumentName = $_.Properties[1].Value',
-      '    }',
-      '  }',
-      '  $results | ConvertTo-Json -Compress',
-      '} catch { Write-Output "[]" }',
-    ].join(' ');
-
-    exec(
-      'powershell -NoProfile -Command "' + ps.replace(/"/g, '\\"') + '"',
-      { timeout: 15000 },
-      (error, stdout) => {
-        if (error || !stdout.trim() || stdout.trim() === '[]') {
-          resolve([]);
-          return;
-        }
-        try {
-          const parsed = JSON.parse(stdout.trim());
-          const list = Array.isArray(parsed) ? parsed : [parsed];
-          const results: PrintEvent[] = list
-            .filter((e: Record<string, unknown>) => e.PrinterName || e.printerName)
-            .map((e: Record<string, unknown>) => ({
-              timeCreated: String(e.TimeCreated || e.timeCreated || ''),
-              printerName: String(e.PrinterName || e.printerName || ''),
-              documentName: String(e.DocumentName || e.documentName || 'Unknown document'),
-            }));
-          resolve(results);
-        } catch {
-          resolve([]);
-        }
-      },
-    );
-  });
-}
+`.trim();
