@@ -5,7 +5,7 @@ import { getStore } from './store';
 import { detectSystemPrinters, checkPrinterStatus } from './printer-detect';
 import { isAutoStartEnabled, setAutoStart } from './autostart';
 import { sendTestPrint } from './auto-print';
-import { readRecentEntries } from '../core/log';
+import { readRecentEntries, info } from '../core/log';
 import { getAdapter } from '../core/printers';
 import { getScheduleStatus, installSchedule, uninstallSchedule, refreshScheduleIfInstalled } from './schedule';
 import { buildTickSummary, summaryWorthShowing } from '../core/tick-summary';
@@ -38,8 +38,15 @@ export function setupIpcHandlers(): void {
   ipcMain.handle('check-printer-status', (_e, printerName: string) => checkPrinterStatus(printerName));
 
   // Phase 2: Auto-start
-  ipcMain.handle('get-autostart', () => isAutoStartEnabled());
-  ipcMain.handle('set-autostart', (_e, enabled: boolean) => setAutoStart(enabled));
+  ipcMain.handle('get-autostart', () => {
+    const enabled = isAutoStartEnabled();
+    info('settings', 'Read autostart', { enabled });
+    return enabled;
+  });
+  ipcMain.handle('set-autostart', (_e, enabled: boolean) => {
+    info('settings', 'Toggling autostart', { requested: enabled });
+    setAutoStart(enabled);
+  });
 
   // Phase 2: Get all events (for history view)
   ipcMain.handle('get-all-events', () => store.getAllEvents());
@@ -49,7 +56,9 @@ export function setupIpcHandlers(): void {
   ipcMain.handle('get-settings', () => store.getSettings());
   ipcMain.handle('update-settings', async (_e, partial) => {
     const before = store.getSettings();
+    info('settings', 'Updating settings', { partial, before });
     const after = store.updateSettings(partial);
+    info('settings', 'Settings saved', { after });
     // If tick interval changed and a schedule is installed, re-register
     // it so the new cadence takes effect without the user toggling off/on.
     if (partial && typeof partial.tickIntervalSeconds === 'number'
@@ -95,9 +104,23 @@ export function setupIpcHandlers(): void {
   ipcMain.handle('attempt-fix-detection', () => getAdapter().attemptFixDetection());
 
   // Background maintenance schedule (Phase 2.3)
-  ipcMain.handle('get-schedule-status', () => getScheduleStatus());
-  ipcMain.handle('install-schedule', () => installSchedule());
-  ipcMain.handle('uninstall-schedule', () => uninstallSchedule());
+  ipcMain.handle('get-schedule-status', async () => {
+    const status = await getScheduleStatus();
+    info('settings', 'Read schedule status', status);
+    return status;
+  });
+  ipcMain.handle('install-schedule', async () => {
+    info('settings', 'Installing background schedule…');
+    const result = await installSchedule();
+    info('settings', 'Install schedule result', result);
+    return result;
+  });
+  ipcMain.handle('uninstall-schedule', async () => {
+    info('settings', 'Uninstalling background schedule…');
+    const result = await uninstallSchedule();
+    info('settings', 'Uninstall schedule result', result);
+    return result;
+  });
 
   // Tick summary since last GUI launch (3.0.11+)
   ipcMain.handle('get-tick-summary', () => {

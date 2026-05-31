@@ -89,26 +89,31 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   }, [tab]);
 
   const loadSettings = async () => {
-    setLoading(true);
+    // Fast lane — settings + version are an in-memory JSON read and a
+    // string lookup. Both come back in <5 ms; we can render the panel
+    // immediately. The slow lane (PowerShell-backed status queries) fills
+    // in afterwards without blocking the UI.
     try {
-      const [enabled, settings, version, detectionStatus, scheduleStatus] = await Promise.all([
+      const [enabled, settings, version] = await Promise.all([
         window.api.getAutoStart(),
         window.api.getSettings(),
         window.api.getAppVersion(),
-        window.api.getDetectionStatus(),
-        window.api.getScheduleStatus(),
       ]);
       setAutoStart(enabled);
       setAutoMaintenancePrint(settings.autoMaintenancePrint);
       setMaintenanceWindow(settings.maintenanceWindow ?? { startHour: 0, endHour: 24 });
       setTickInterval(settings.tickIntervalSeconds ?? 6 * 60 * 60);
       setAppVersion(version);
-      setDetection(detectionStatus);
-      setSchedule(scheduleStatus);
-      try { setUpdateState(await window.api.getUpdateState()); } catch { /* ignore */ }
-    } finally {
+      setLoading(false);
+    } catch {
       setLoading(false);
     }
+
+    // Slow lane: these each spawn a PowerShell process and can take 1-3s
+    // on Windows. Run them in parallel after the fast lane has rendered.
+    window.api.getDetectionStatus().then(setDetection).catch(() => { /* surfaced in diagnostics */ });
+    window.api.getScheduleStatus().then(setSchedule).catch(() => { /* surfaced in diagnostics */ });
+    window.api.getUpdateState().then(setUpdateState).catch(() => { /* surfaced in diagnostics */ });
   };
 
   const handleAutoStartToggle = async () => {
