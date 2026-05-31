@@ -59,6 +59,20 @@ if (process.platform === 'win32') {
   app.setAppUserModelId('com.inkflow.app');
 }
 
+// Enforce single instance — clicking the tray/taskbar icon again should
+// re-focus the existing window instead of spawning a duplicate process.
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (!mainWindow) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    if (!mainWindow.isVisible()) mainWindow.show();
+    mainWindow.focus();
+  });
+}
+
 app.on('before-quit', () => {
   isQuitting = true;
   stopPrintMonitor();
