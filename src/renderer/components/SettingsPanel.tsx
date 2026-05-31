@@ -1,16 +1,59 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../ThemeContext';
-import { AppSettings, DetectionStatus, DetectionFixResult, ScheduleStatus, ScheduleResult } from '../types';
+import { DetectionStatus, DetectionFixResult, ScheduleStatus, ScheduleResult } from '../types';
 import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface SettingsPanelProps {
   onClose: () => void;
 }
 
+type TabId = 'general' | 'automation' | 'detection' | 'backup';
+
+const TABS: { id: TabId; label: string; icon: JSX.Element }[] = [
+  {
+    id: 'general',
+    label: 'General',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+      </svg>
+    ),
+  },
+  {
+    id: 'automation',
+    label: 'Automation',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+    ),
+  },
+  {
+    id: 'detection',
+    label: 'Detection',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+    ),
+  },
+  {
+    id: 'backup',
+    label: 'Backup',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+      </svg>
+    ),
+  },
+];
+
 export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   useEscapeKey(onClose);
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+
+  const [tab, setTab] = useState<TabId>('general');
   const [autoStart, setAutoStart] = useState(false);
   const [autoMaintenancePrint, setAutoMaintenancePrint] = useState(false);
   const [appVersion, setAppVersion] = useState('');
@@ -24,9 +67,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [scheduleResult, setScheduleResult] = useState<ScheduleResult | null>(null);
   const [maintenanceWindow, setMaintenanceWindow] = useState<{ startHour: number; endHour: number } | null>(null);
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
+  useEffect(() => { loadSettings(); }, []);
 
   const loadSettings = async () => {
     setLoading(true);
@@ -47,6 +88,23 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAutoStartToggle = async () => {
+    const next = !autoStart;
+    setAutoStart(next);
+    await window.api.setAutoStart(next);
+  };
+
+  const handleAutoMaintenancePrintToggle = async () => {
+    const next = !autoMaintenancePrint;
+    setAutoMaintenancePrint(next);
+    await window.api.updateSettings({ autoMaintenancePrint: next });
+  };
+
+  const handleWindowChange = async (next: { startHour: number; endHour: number }) => {
+    setMaintenanceWindow(next);
+    await window.api.updateSettings({ maintenanceWindow: next });
   };
 
   const handleEnableDetection = async () => {
@@ -82,220 +140,230 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
     }
   };
 
-  const handleAutoStartToggle = async () => {
-    const next = !autoStart;
-    setAutoStart(next);
-    await window.api.setAutoStart(next);
-  };
-
-  const handleAutoMaintenancePrintToggle = async () => {
-    const next = !autoMaintenancePrint;
-    setAutoMaintenancePrint(next);
-    await window.api.updateSettings({ autoMaintenancePrint: next });
-  };
-
-  const handleWindowChange = async (next: { startHour: number; endHour: number }) => {
-    setMaintenanceWindow(next);
-    await window.api.updateSettings({ maintenanceWindow: next });
-  };
-
   const handleExport = async () => {
     setBackupStatus(null);
     const success = await window.api.exportBackup();
-    setBackupStatus(success ? 'Backup exported successfully!' : 'Export cancelled.');
+    setBackupStatus(success ? 'Backup exported successfully.' : 'Export cancelled.');
     setTimeout(() => setBackupStatus(null), 3000);
   };
 
   const handleImport = async () => {
     setBackupStatus(null);
     const success = await window.api.importBackup();
-    setBackupStatus(success ? 'Backup restored! Restart recommended.' : 'Import cancelled.');
+    setBackupStatus(success ? 'Backup restored. Restart recommended.' : 'Import cancelled.');
     setTimeout(() => setBackupStatus(null), 5000);
   };
 
   const toggleBtnClass = (on: boolean) =>
-    `relative w-11 h-6 rounded-full transition-colors ${on ? 'bg-blue-600' : isDark ? 'bg-gray-600' : 'bg-gray-300'}`;
-
+    `relative w-11 h-6 rounded-full transition-colors shrink-0 ${on ? 'bg-blue-600' : isDark ? 'bg-gray-600' : 'bg-gray-300'}`;
   const toggleDotClass = (on: boolean) =>
     `absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${on ? 'translate-x-5' : 'translate-x-0'}`;
 
+  const tile = isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200';
+  const subtle = isDark ? 'text-gray-500' : 'text-gray-400';
+  const body = isDark ? 'text-gray-300' : 'text-gray-700';
+
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div
-        className={`${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'} border rounded-xl p-6 w-full max-w-md shadow-2xl`}
+        className={`${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'} border rounded-xl shadow-2xl w-full max-w-2xl flex flex-col`}
         onClick={(e) => e.stopPropagation()}
+        style={{ maxHeight: 'min(90vh, 640px)' }}
       >
-        <h2 className="text-xl font-bold mb-5">Settings</h2>
-
-        {loading ? (
-          <p className={`${isDark ? 'text-gray-500' : 'text-gray-400'} text-center py-6`}>Loading...</p>
-        ) : (
-          <div className="space-y-4">
-            {/* Auto-start */}
-            <div className={`flex items-center justify-between p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg`}>
-              <div>
-                <p className="font-medium text-sm">Start with Windows</p>
-                <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-0.5`}>Launch Ink Flow automatically when you log in</p>
-              </div>
-              <button onClick={handleAutoStartToggle} className={toggleBtnClass(autoStart)}>
-                <span className={toggleDotClass(autoStart)} />
-              </button>
-            </div>
-
-            {/* Auto maintenance print */}
-            <div className={`p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg`}>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-medium text-sm">Auto Maintenance Print</p>
-                  <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-0.5`}>Automatically send a test page when printers are overdue</p>
-                </div>
-                <button onClick={handleAutoMaintenancePrintToggle} className={toggleBtnClass(autoMaintenancePrint)}>
-                  <span className={toggleDotClass(autoMaintenancePrint)} />
-                </button>
-              </div>
-              {autoMaintenancePrint && maintenanceWindow && (
-                <div className="mt-3 flex items-center gap-2">
-                  <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Only between</span>
-                  <select
-                    value={maintenanceWindow.startHour}
-                    onChange={(e) => handleWindowChange({ ...maintenanceWindow, startHour: parseInt(e.target.value) })}
-                    className={`px-2 py-1 ${isDark ? 'bg-gray-700 text-gray-200' : 'bg-white text-gray-800'} border ${isDark ? 'border-gray-600' : 'border-gray-300'} rounded text-xs`}
-                  >
-                    {Array.from({ length: 24 }, (_, h) => h).map(h => <option key={h} value={h}>{h.toString().padStart(2, '0')}:00</option>)}
-                  </select>
-                  <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>and</span>
-                  <select
-                    value={maintenanceWindow.endHour}
-                    onChange={(e) => handleWindowChange({ ...maintenanceWindow, endHour: parseInt(e.target.value) })}
-                    className={`px-2 py-1 ${isDark ? 'bg-gray-700 text-gray-200' : 'bg-white text-gray-800'} border ${isDark ? 'border-gray-600' : 'border-gray-300'} rounded text-xs`}
-                  >
-                    {Array.from({ length: 25 }, (_, h) => h).map(h => <option key={h} value={h}>{h === 24 ? '24:00' : h.toString().padStart(2, '0') + ':00'}</option>)}
-                  </select>
-                  <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                    {maintenanceWindow.startHour === 0 && maintenanceWindow.endHour === 24 ? '(any time)' : 'local time'}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Background maintenance (Phase 2.3) */}
-            <div className={`p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg`}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-medium text-sm">Background Maintenance</p>
-                  <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-0.5`}>
-                    Check overdue printers every 6 hours even when the app is closed.
-                  </p>
-                </div>
+        {/* Header + tab strip */}
+        <div className={`px-6 pt-5 border-b ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
+          <h2 className="text-xl font-bold mb-4">Settings</h2>
+          <div className="flex gap-1 -mb-px">
+            {TABS.map(t => {
+              const active = t.id === tab;
+              return (
                 <button
-                  onClick={handleScheduleToggle}
-                  disabled={schedulePending}
-                  className={toggleBtnClass(!!schedule?.installed)}
-                  title={schedule?.installed ? 'Click to disable' : 'Click to enable'}
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                    active
+                      ? `border-blue-500 ${isDark ? 'text-blue-400' : 'text-blue-600'}`
+                      : `border-transparent ${subtle} hover:${body}`
+                  }`}
                 >
-                  <span className={toggleDotClass(!!schedule?.installed)} />
+                  {t.icon}
+                  {t.label}
                 </button>
-              </div>
-              {schedule?.detail && (
-                <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-2`}>
-                  {schedule.detail}
-                </p>
-              )}
-              {scheduleResult && (
-                <p className={`text-xs mt-2 ${scheduleResult.success ? 'text-green-400' : 'text-red-400'}`}>
-                  {scheduleResult.success
-                    ? (schedule?.installed ? 'Background tick installed.' : 'Background tick removed.')
-                    : scheduleResult.reason}
-                </p>
-              )}
-            </div>
+              );
+            })}
+          </div>
+        </div>
 
-            {/* Auto-detection status */}
-            {detection && (
-              <div className={`p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg`}>
-                <p className="font-medium text-sm mb-2">Print Auto-Detection</p>
-                <div className="flex items-start gap-2 mb-2">
-                  <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${detection.available ? 'bg-green-500' : 'bg-red-500'}`} />
-                  <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{detection.reason}</p>
-                </div>
-                {!detection.available && detection.fixable && (
-                  <>
-                    <button
-                      onClick={handleEnableDetection}
-                      disabled={fixing}
-                      className="w-full px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                    >
-                      {fixing ? 'Requesting permission…' : (detection.actionHint || 'Enable auto-detection')}
+        {/* Tab content */}
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          {loading ? (
+            <p className={`${subtle} text-center py-10`}>Loading…</p>
+          ) : (
+            <>
+              {tab === 'general' && (
+                <div className="space-y-3">
+                  <div className={`flex items-center justify-between p-3 ${tile} border rounded-lg`}>
+                    <div>
+                      <p className="font-medium text-sm">Start with Windows</p>
+                      <p className={`text-xs ${subtle} mt-0.5`}>Launch Ink Flow automatically when you log in (minimised to tray)</p>
+                    </div>
+                    <button onClick={handleAutoStartToggle} className={toggleBtnClass(autoStart)}>
+                      <span className={toggleDotClass(autoStart)} />
                     </button>
-                    {fixResult && (
-                      <p className={`text-xs mt-2 ${fixResult.success ? 'text-green-400' : 'text-red-400'}`}>
-                        {fixResult.success ? 'Enabled! Auto-detection is now active.' : fixResult.reason}
+                  </div>
+                  <div className={`p-3 ${tile} border rounded-lg`}>
+                    <p className="font-medium text-sm">About</p>
+                    <p className={`text-xs ${subtle} mt-1`}>Ink Flow v{appVersion} — Printer Maintenance Tracker</p>
+                    <p className={`text-xs ${subtle} mt-0.5`}>Keeps liquid-ink printers healthy by tracking idle time and running scheduled maintenance prints.</p>
+                  </div>
+                </div>
+              )}
+
+              {tab === 'automation' && (
+                <div className="space-y-3">
+                  <div className={`p-3 ${tile} border rounded-lg`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-sm">Auto Maintenance Print</p>
+                        <p className={`text-xs ${subtle} mt-0.5`}>Automatically send a color test page when a printer is overdue</p>
+                      </div>
+                      <button onClick={handleAutoMaintenancePrintToggle} className={toggleBtnClass(autoMaintenancePrint)}>
+                        <span className={toggleDotClass(autoMaintenancePrint)} />
+                      </button>
+                    </div>
+                    {autoMaintenancePrint && maintenanceWindow && (
+                      <div className="mt-3 flex items-center gap-2 flex-wrap">
+                        <span className={`text-xs ${body}`}>Only between</span>
+                        <select
+                          value={maintenanceWindow.startHour}
+                          onChange={(e) => handleWindowChange({ ...maintenanceWindow, startHour: parseInt(e.target.value) })}
+                          className={`px-2 py-1 ${isDark ? 'bg-gray-700 text-gray-200 border-gray-600' : 'bg-white text-gray-800 border-gray-300'} border rounded text-xs`}
+                        >
+                          {Array.from({ length: 24 }, (_, h) => h).map(h => <option key={h} value={h}>{h.toString().padStart(2, '0')}:00</option>)}
+                        </select>
+                        <span className={`text-xs ${body}`}>and</span>
+                        <select
+                          value={maintenanceWindow.endHour}
+                          onChange={(e) => handleWindowChange({ ...maintenanceWindow, endHour: parseInt(e.target.value) })}
+                          className={`px-2 py-1 ${isDark ? 'bg-gray-700 text-gray-200 border-gray-600' : 'bg-white text-gray-800 border-gray-300'} border rounded text-xs`}
+                        >
+                          {Array.from({ length: 25 }, (_, h) => h).map(h => <option key={h} value={h}>{h === 24 ? '24:00' : h.toString().padStart(2, '0') + ':00'}</option>)}
+                        </select>
+                        <span className={`text-xs ${subtle}`}>
+                          {maintenanceWindow.startHour === 0 && maintenanceWindow.endHour === 24 ? '(any time)' : 'local time'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className={`p-3 ${tile} border rounded-lg`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm">Background Maintenance</p>
+                        <p className={`text-xs ${subtle} mt-0.5`}>Check overdue printers every 6 hours even when the app is closed</p>
+                      </div>
+                      <button
+                        onClick={handleScheduleToggle}
+                        disabled={schedulePending}
+                        className={toggleBtnClass(!!schedule?.installed)}
+                      >
+                        <span className={toggleDotClass(!!schedule?.installed)} />
+                      </button>
+                    </div>
+                    {schedule?.detail && <p className={`text-xs ${subtle} mt-2`}>{schedule.detail}</p>}
+                    {scheduleResult && (
+                      <p className={`text-xs mt-2 ${scheduleResult.success ? 'text-green-400' : 'text-red-400'}`}>
+                        {scheduleResult.success
+                          ? (schedule?.installed ? 'Background tick installed.' : 'Background tick removed.')
+                          : scheduleResult.reason}
                       </p>
                     )}
-                  </>
-                )}
-              </div>
-            )}
+                  </div>
 
-            {/* Backup & Restore */}
-            <div className={`p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg`}>
-              <p className="font-medium text-sm mb-2">Backup & Restore</p>
-              <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mb-3`}>Export or import your printer data and settings.</p>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleExport}
-                  className={`flex-1 px-3 py-1.5 ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'} rounded-lg text-sm font-medium transition-colors`}
-                >
-                  Export Backup
-                </button>
-                <button
-                  onClick={handleImport}
-                  className={`flex-1 px-3 py-1.5 ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'} rounded-lg text-sm font-medium transition-colors`}
-                >
-                  Import Backup
-                </button>
-              </div>
-              {backupStatus && (
-                <p className="text-xs text-blue-400 mt-2">{backupStatus}</p>
+                  <div className={`p-3 ${tile} border rounded-lg`}>
+                    <p className="font-medium text-sm mb-2">Alert escalation</p>
+                    <div className="grid grid-cols-2 gap-1.5 text-xs">
+                      <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-green-500" /><span className={subtle}><span className="text-green-500 font-medium">Good</span> — plenty of time</span></div>
+                      <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-yellow-500" /><span className={subtle}><span className="text-yellow-500 font-medium">Warning</span> — approaching</span></div>
+                      <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-orange-500" /><span className={subtle}><span className="text-orange-500 font-medium">Urgent</span> — &lt;1 day</span></div>
+                      <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-red-500" /><span className={subtle}><span className="text-red-500 font-medium">Overdue</span> — past deadline</span></div>
+                    </div>
+                  </div>
+                </div>
               )}
-            </div>
 
-            {/* Notification info */}
-            <div className={`p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg`}>
-              <p className="font-medium text-sm mb-2">Alert Levels</p>
-              <div className="space-y-1.5 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                  <span className={isDark ? 'text-gray-400' : 'text-gray-500'}><span className="text-green-500 font-medium">Good</span> — Plenty of time remaining</span>
+              {tab === 'detection' && (
+                <div className="space-y-3">
+                  {detection && (
+                    <div className={`p-3 ${tile} border rounded-lg`}>
+                      <p className="font-medium text-sm mb-2">Print Auto-Detection</p>
+                      <div className="flex items-start gap-2 mb-2">
+                        <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${detection.available ? 'bg-green-500' : 'bg-red-500'}`} />
+                        <p className={`text-xs ${body}`}>{detection.reason}</p>
+                      </div>
+                      {!detection.available && detection.fixable && (
+                        <>
+                          <button
+                            onClick={handleEnableDetection}
+                            disabled={fixing}
+                            className="w-full px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                          >
+                            {fixing ? 'Requesting permission…' : (detection.actionHint || 'Enable auto-detection')}
+                          </button>
+                          {fixResult && (
+                            <p className={`text-xs mt-2 ${fixResult.success ? 'text-green-400' : 'text-red-400'}`}>
+                              {fixResult.success ? 'Enabled. Auto-detection is now active.' : fixResult.reason}
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                  <div className={`p-3 ${tile} border rounded-lg`}>
+                    <p className={`text-xs ${subtle}`}>
+                      <strong className={body}>How this works:</strong> When you print from any application, Ink Flow detects the job and automatically resets the maintenance timer for that printer. On Windows this requires the PrintService Operational log; on macOS and Linux it reads CUPS' page log.
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
-                  <span className={isDark ? 'text-gray-400' : 'text-gray-500'}><span className="text-yellow-500 font-medium">Warning</span> — Approaching maintenance deadline</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-orange-500"></span>
-                  <span className={isDark ? 'text-gray-400' : 'text-gray-500'}><span className="text-orange-500 font-medium">Urgent</span> — Less than 1 day left</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                  <span className={isDark ? 'text-gray-400' : 'text-gray-500'}><span className="text-red-500 font-medium">Overdue</span> — Past deadline</span>
-                </div>
-              </div>
-            </div>
+              )}
 
-            {/* About */}
-            <div className={`p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg`}>
-              <p className="font-medium text-sm">About</p>
-              <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-1`}>Ink Flow v{appVersion} — Printer Maintenance Tracker</p>
-              <p className={`text-xs ${isDark ? 'text-gray-600' : 'text-gray-400'} mt-0.5`}>Keeps your liquid-ink printers healthy by tracking idle time.</p>
-            </div>
-          </div>
-        )}
+              {tab === 'backup' && (
+                <div className="space-y-3">
+                  <div className={`p-3 ${tile} border rounded-lg`}>
+                    <p className="font-medium text-sm mb-2">Backup &amp; Restore</p>
+                    <p className={`text-xs ${subtle} mb-3`}>Export all printer data and settings as JSON, or restore from a previously exported file.</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleExport}
+                        className={`flex-1 px-3 py-1.5 ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'} rounded-lg text-sm font-medium transition-colors`}
+                      >
+                        Export
+                      </button>
+                      <button
+                        onClick={handleImport}
+                        className={`flex-1 px-3 py-1.5 ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'} rounded-lg text-sm font-medium transition-colors`}
+                      >
+                        Import
+                      </button>
+                    </div>
+                    {backupStatus && <p className={`text-xs mt-2 ${body}`}>{backupStatus}</p>}
+                  </div>
+                  <div className={`p-3 ${tile} border rounded-lg`}>
+                    <p className={`text-xs ${subtle}`}>
+                      <strong className={body}>Where data lives:</strong> Ink Flow stores everything in a single JSON file under your user-data directory. The backup is a snapshot of that file — useful before migrating to a new machine or as a safety net before major changes.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
 
-        <div className="flex justify-end pt-4">
+        {/* Footer */}
+        <div className={`px-6 py-3 border-t ${isDark ? 'border-gray-800' : 'border-gray-200'} flex justify-end`}>
           <button
             onClick={onClose}
-            className={`px-4 py-2 ${isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'} rounded-lg transition-colors`}
+            className={`px-4 py-1.5 ${isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'} rounded-lg text-sm transition-colors`}
           >
             Close
           </button>
